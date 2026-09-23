@@ -172,7 +172,10 @@ export class Post {
     const pr = this.renderer.getPixelRatio();
     const W = Math.floor(w * pr), H = Math.floor(h * pr);
     this.mrt.setSize(W, H);
+    // The composer keeps its own pixel ratio: without this, a resolution change leaves black blocks.
+    this.composer.setPixelRatio(pr);
     this.composer.setSize(w, h);
+    this.bloom.setSize(Math.floor(W / 2), Math.floor(H / 2));
     this.ink.uniforms.uRes.value.set(W, H);
     this.ink.uniforms.uWidth.value = Math.max(1, H / 1080) * 1.3;
     this.grade.uniforms.uRes.value.set(W, H);

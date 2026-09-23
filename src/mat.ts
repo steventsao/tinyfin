@@ -79,15 +79,16 @@ void main(){
   #ifdef TENT
     // Squid: the mantle breathes, arms and tentacles trail and curl.
     float pht = uTime * uSwimRate + seed;
-    float kt = max(0.0, -p.z - 0.15);
-    p.x += sin(pht * 0.7 + p.z * 7.0 + p.y * 40.0) * kt * 0.22;
-    p.y += cos(pht * 0.6 + p.z * 6.0 + p.x * 40.0) * kt * 0.18;
-    if (p.z > -0.12) p.xy *= 1.0 + 0.05 * sin(pht * 0.8);
+    // Arms start at z 0.22 (mantle and head are the front 0.28 of the length); tentacles trail to −0.5.
+    float kt = max(0.0, 0.22 - p.z);
+    p.x += sin(pht * 0.7 + p.z * 7.0 + p.y * 40.0) * kt * 0.12;
+    p.y += cos(pht * 0.6 + p.z * 6.0 + p.x * 40.0) * kt * 0.1;
+    if (p.z > 0.24) p.xy *= 1.0 + 0.05 * sin(pht * 0.8);
   #endif
   #ifdef SCULL
     // Ocean sunfish: tall dorsal and anal fins beat together side to side; the body barely moves.
     float phs = uTime * uSwimRate + seed;
-    p.x += sin(phs) * uSwimAmp * pow(max(abs(p.y) - 0.25, 0.0), 1.2) * 3.0;
+    p.x += sin(phs) * uSwimAmp * pow(max(abs(p.y) - 0.33, 0.0), 1.1) * 3.0;
   #endif
   #ifdef JELLY
     float pulse = sin(uTime * 2.2 + seed);

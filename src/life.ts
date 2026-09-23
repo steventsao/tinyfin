@@ -29,12 +29,12 @@ function spawnAround(out: THREE.Vector3, center: THREE.Vector3, fwd: THREE.Vecto
 }
 
 const SCHOOL_KINDS = [
-  { tint: "#9fd3ff", size: 0.45, n: 34 },
-  { tint: "#ffd84a", size: 0.35, n: 26 },
-  { tint: "#b8ffe9", size: 0.55, n: 22 },
-  { tint: "#ff9ec2", size: 0.3, n: 30 },
-  { tint: "#c9d6ff", size: 0.7, n: 16 },
-  { tint: "#7cf0ff", size: 0.4, n: 28 },
+  { tint: "#9fd3ff", size: 0.25, n: 34 },
+  { tint: "#ffd84a", size: 0.18, n: 26 },
+  { tint: "#b8ffe9", size: 0.35, n: 22 },
+  { tint: "#ff9ec2", size: 0.15, n: 30 },
+  { tint: "#c9d6ff", size: 0.6, n: 16 },
+  { tint: "#7cf0ff", size: 0.22, n: 28 },
 ];
 
 interface Member { p: THREE.Vector3; v: THREE.Vector3; off: THREE.Vector3; dir: THREE.Vector3 }

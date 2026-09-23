@@ -19,7 +19,7 @@
     #hud .row { font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--dim); margin-top: 4px; font-variant-numeric: tabular-nums; }
     #hud .row b { color: var(--ink); font-weight: 500; }
     #food-wrap { position: fixed; right: 22px; top: 18px; text-align: right; pointer-events: none; text-shadow: 0 1px 8px rgba(0, 20, 40, 0.5); }
-    #food { font-family: Fraunces, serif; font-size: 30px; font-weight: 300; }
+    #seen { font-family: Fraunces, serif; font-size: 30px; font-weight: 300; }
     #food-wrap .row { font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--dim); }
     body.auto #hud, body.auto #food-wrap, body.auto #keys { display: none; }
     #food-wrap .row b { color: var(--ink); font-weight: 500; }
@@ -48,7 +48,7 @@
     <div class="row">Depth <b id="depth">0 m</b> · <span id="dist">0 m swum</span></div>
     <div class="row" id="time"></div>
   </div>
-  <div id="food-wrap"><div id="food">0</div><div class="row">plankton</div><div class="row" style="margin-top:8px"><b id="seen">0/10</b> giants seen</div></div>
+  <div id="food-wrap"><div id="seen">0</div><div class="row">species seen</div></div>
   <div id="toast"></div>
   <div id="keys">steer: mouse or finger · W faster · shift dash · space / C rise, sink · T time · B bubbles · M mute</div>
   <div id="intro">

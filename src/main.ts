@@ -39,6 +39,7 @@ const motes = new Motes(scene, player.pos);
 const bubbles = new Bubbles(scene);
 const input = new Input(renderer.domElement);
 const giants = new Megafauna(scene, params.get("encounter"));
+giants.loadModels(import.meta.env.BASE_URL);
 const audio = new Audio();
 
 // Build the whole first neighbourhood before the first frame.
@@ -50,7 +51,6 @@ const hud = {
   depth: document.getElementById("depth")!,
   zone: document.getElementById("zone")!,
   dist: document.getElementById("dist")!,
-  food: document.getElementById("food")!,
   time: document.getElementById("time")!,
   seen: document.getElementById("seen")!,
   toast: document.getElementById("toast")!,
@@ -132,7 +132,7 @@ function frame(now: number) {
   jellies.update(dt, t, player.pos, player.fwd);
   const ate = motes.update(t, player.mouth, 0.55 * player.scale + 0.35, player.pos, player.fwd);
   if (ate) {
-    player.scale = Math.min(2.6, 1 + motes.eaten * 0.012);
+    player.scale = Player.BASE * Math.min(2.2, 1 + motes.eaten * 0.01);
     audio.chime(motes.eaten);
     bubbles.emit(player.mouth, 2);
   }
@@ -144,7 +144,7 @@ function frame(now: number) {
   if (toastT > 0 && (toastT -= dt) <= 0) hud.toast.classList.remove("on");
 
   // Chase camera: behind and a little above, lagging on turns; never through the floor or surface.
-  const s = player.scale;
+  const s = Math.max(player.scale, 0.45);
   camTarget.copy(player.pos).addScaledVector(player.fwd, -3.1 * s).add(look.set(0, 0.85 * s, 0));
   camera.position.lerp(camTarget, 1 - Math.exp(-dt * 3.2));
   const fl = height(camera.position.x, camera.position.z) + 0.7;
@@ -163,9 +163,8 @@ function frame(now: number) {
     hud.depth.textContent = `${Math.max(0, -player.pos.y).toFixed(1)} m`;
     hud.zone.textContent = biomeName(player.pos.x, player.pos.z);
     hud.dist.textContent = player.distance < 1000 ? `${player.distance.toFixed(0)} m swum` : `${(player.distance / 1000).toFixed(2)} km swum`;
-    hud.food.textContent = `${motes.eaten}`;
     hud.time.textContent = `${tod.name} · seed ${WORLD.seed}`;
-    hud.seen.textContent = `${giants.seen.size}/${giants.total}`;
+    hud.seen.textContent = `${giants.seen.size}`;
   }
 
   post.render(scene, camera, t);

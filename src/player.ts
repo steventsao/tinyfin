@@ -28,7 +28,9 @@ export class Player {
   yaw = 0;
   pitch = 0;
   speed = 3;
-  scale = 1;
+  /** Body length ≈ 1.3 × scale m: 0.27 makes a ~35 cm reef fish, so a 25 m blue whale is ~70 of you. */
+  static readonly BASE = 0.27;
+  scale = Player.BASE;
   distance = 0;
   private roll = 0;
   private phase = 0;
@@ -67,7 +69,7 @@ export class Player {
     this.pitch = clamp(this.pitch + steerY * 1.3 * dt, -1.2, 1.2);
 
     const boost = !auto && (inp.down("ShiftLeft") || inp.down("ShiftRight"));
-    const target = boost ? 12 : thrust > 0 ? 3 + thrust * 4 : thrust < 0 ? 0.6 : 3;
+    const target = boost ? 8 : thrust > 0 ? 2.2 + thrust * 2.8 : thrust < 0 ? 0.4 : 2.2;
     this.speed += (target - this.speed) * (1 - Math.exp(-dt * (target > this.speed ? 2.2 : 1.4)));
 
     const cp = Math.cos(this.pitch);
@@ -83,7 +85,7 @@ export class Player {
     this.roll += (-this.yawRate * 0.35 - this.roll) * (1 - Math.exp(-dt * 4));
     this.phase += dt * (5 + this.speed * 1.6);
     this.mat.uniforms.uSwimPhase.value = this.phase;
-    this.mat.uniforms.uSwimAmp.value = 0.05 + Math.min(this.speed, 12) * 0.007;
+    this.mat.uniforms.uSwimAmp.value = 0.05 + Math.min(this.speed, 8) * 0.01;
 
     this.mesh.position.copy(this.pos);
     this.mesh.rotation.set(-this.pitch, this.yaw, this.roll);

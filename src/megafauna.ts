@@ -1,5 +1,7 @@
 import * as THREE from "three";
 import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
+import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+import { DRACOLoader } from "three/addons/loaders/DRACOLoader.js";
 import { toon } from "./mat";
 import { prep } from "./geo";
 import { biome, height, type Biome } from "./terrain";
@@ -415,9 +417,9 @@ export class Megafauna {
         band: [3, 8], floorRel: true, clear: 2, radius: 0.12, group: [1, 5],
         vary: { girth: [0.85, 1.2], width: [0.88, 1.15], light: [0.7, 1.15], hue: 0.02, speed: [0.8, 1.3] },
         weight: (b) => b.reef * 1.4 + b.flats * 0.35 },
-      { key: "squid", name: "Giant squid", blurb: "13 metres. Almost never seen alive. Rises from the deep at night.", len: [6.5, 10], geoScale: 1, speed: 1.4,
+      { key: "squid", name: "Giant squid", blurb: "13 metres. Almost never seen alive. Rises from the deep at night.", len: [8, 12.5], geoScale: 1, speed: 1.4,
         mesh: mk(squidGeo(), toon({ ...opts, id: 24, tent: true, swimRate: 1.3 }), 2),
-        band: [4, 12], floorRel: true, clear: 3, radius: 0.07, group: [1, 1],
+        band: [4, 12], floorRel: true, clear: 3, radius: 0.04, group: [1, 1],
         vary: { girth: [0.85, 1.18], light: [0.75, 1.2], hue: 0.04, speed: [0.8, 1.2] },
         weight: (b, night) => b.trench * (night ? 2.2 : 0.25) },
       { key: "sperm", name: "Sperm whale", blurb: "16 metres. A third of it is head. Hunts squid in the dark, by sound.", len: [11, 18], geoScale: 1, speed: 2.2,
@@ -432,7 +434,7 @@ export class Megafauna {
         weight: (b) => b.flats * 0.7 + b.kelp * 0.6 + b.reef * 0.3 + b.trench * 0.3 },
       { key: "whiteshark", name: "Great white shark", blurb: "5 metres. Countershaded: dark from above, pale from below.", len: [4, 6], geoScale: 1, speed: 2.2,
         mesh: mk(whiteSharkGeo(), toon({ ...opts, id: 27, swim: true, swimAmp: 0.06, swimRate: 3 }), 3),
-        band: [-4, -16], clear: 2, radius: 0.1, group: [1, 1],
+        band: [-4, -16], clear: 2, radius: 0.08, group: [1, 1],
         vary: { girth: [0.9, 1.18], light: [0.85, 1.12], hue: 0.015, speed: [0.8, 1.3] },
         weight: (b) => b.flats * 0.6 + b.kelp * 0.6 + b.reef * 0.3 },
       { key: "mola", name: "Ocean sunfish", blurb: "Taller than it is long. The heaviest bony fish in the sea.", len: [1.8, 3.3], geoScale: 1, speed: 0.8,
@@ -449,6 +451,28 @@ export class Megafauna {
   }
 
   get total(): number { return this.species.length; }
+
+  /**
+   * Swap in the Blender-built models (scripts/blender/species.py) as they arrive. Until then, and if one
+   * fails, the code-built shape stays in place. Same axes and unit length, so nothing else changes.
+   */
+  loadModels(base: string): void {
+    const draco = new DRACOLoader().setDecoderPath(`${base}draco/`);
+    const loader = new GLTFLoader().setDRACOLoader(draco);
+    const keys = ["blue", "humpback", "sperm", "orca", "whiteshark", "whaleshark", "mola", "manta", "squid"];
+    for (const sp of this.species) {
+      if (!keys.includes(sp.key)) continue;
+      loader.load(`${base}models/${sp.key}.glb`, (gltf) => {
+        let found: THREE.Mesh | undefined;
+        gltf.scene.traverse((o) => { if (!found && (o as THREE.Mesh).isMesh) found = o as THREE.Mesh; });
+        if (!found) return;
+        const g = found.geometry;
+        if (!g.getAttribute("normal")) g.computeVertexNormals();
+        sp.mesh.geometry.dispose();
+        sp.mesh.geometry = g;
+      }, undefined, () => { /* keep the code-built shape */ });
+    }
+  }
 
   private spawn(cx: number, cz: number, night: boolean, near?: THREE.Vector3): Encounter {
     const rnd = mulberry32(Math.floor(hash2(cx, cz, 777 + WORLD.seed) * 4294967295));
