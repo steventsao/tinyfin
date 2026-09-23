@@ -23,6 +23,10 @@
     #food-wrap .row { font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--dim); }
     body.auto #hud, body.auto #food-wrap, body.auto #keys { display: none; }
     #food-wrap .row b { color: var(--ink); font-weight: 500; }
+    #mapbtn { pointer-events: auto; margin-top: 10px; background: rgba(8, 30, 48, 0.35); color: var(--ink); border: 1px solid rgba(234, 247, 246, 0.35); border-radius: 999px; padding: 5px 14px; font: 500 11px Inter, system-ui, sans-serif; letter-spacing: 0.14em; text-transform: uppercase; cursor: pointer; }
+    #map { position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%) scale(0.96); opacity: 0; pointer-events: none; transition: opacity 0.35s ease, transform 0.35s ease; border-radius: 50%; box-shadow: 0 10px 60px rgba(0, 10, 25, 0.55); }
+    #map.on { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+    body.auto #mapbtn { display: none; }
     #hint { position: fixed; left: 0; top: 0; pointer-events: none; opacity: 0; transition: opacity 0.8s ease; }
     #hint.on { opacity: 1; }
     #hint .ch { position: absolute; left: -14px; top: -22px; width: 28px; text-align: center; font-family: Fraunces, serif; font-size: 40px; line-height: 40px; color: var(--ink); text-shadow: 0 0 12px rgba(160, 230, 255, 0.8); animation: pulse 1.8s ease-in-out infinite; }
@@ -54,15 +58,15 @@
     <div class="row">Depth <b id="depth">0 m</b> · <span id="dist">0 m swum</span></div>
     <div class="row" id="time"></div>
   </div>
-  <div id="food-wrap"><div id="seen">1</div><div class="row">species seen</div></div>
+  <div id="food-wrap"><div id="seen">1</div><div class="row">species seen</div><button id="mapbtn" aria-label="Map">Map</button></div>
   <div id="toast"></div>
   <div id="hint"><div class="ch">&rsaquo;</div><div class="d"></div></div>
-  <div id="keys">steer: mouse or finger · W faster · shift dash · space / C rise, sink · T time · B bubbles · M mute</div>
+  <div id="keys">steer: mouse or finger · W faster · shift dash · space / C rise, sink · T time · B bubbles · M map · X mute</div>
   <div id="intro">
     <div class="card">
       <h1>Drift</h1>
       <p>An ocean with no edge. You are a small fish.</p>
-      <div class="ctl">Steer with the mouse or a finger &nbsp;·&nbsp; <kbd>W</kbd> or hold to swim faster &nbsp;·&nbsp; <kbd>Shift</kbd> dash<br />Eat the glowing plankton to grow &nbsp;·&nbsp; <kbd>T</kbd> time of day &nbsp;·&nbsp; <kbd>M</kbd> mute</div>
+      <div class="ctl">Steer with the mouse or a finger &nbsp;·&nbsp; <kbd>W</kbd> or hold to swim faster &nbsp;·&nbsp; <kbd>Shift</kbd> dash<br />Eat the glowing plankton to grow &nbsp;·&nbsp; <kbd>T</kbd> time of day &nbsp;·&nbsp; <kbd>M</kbd> map &nbsp;·&nbsp; <kbd>X</kbd> mute</div>
     </div>
   </div>
   <script type="module" src="/src/main.ts"></script>

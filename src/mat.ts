@@ -116,7 +116,7 @@ void main(){
 const FS = /* glsl */ `
 precision highp float;
 ${COMMON}
-uniform float uId, uMask, uEmissive, uCaustic, uRim;
+uniform float uId, uMask, uEmissive, uCaustic, uRim, uFogMul;
 in vec3 vWorld; in vec3 vN; in vec3 vCol;
 layout(location = 0) out vec4 gColor;
 layout(location = 1) out vec4 gNormal;
@@ -160,7 +160,7 @@ void main(){
   // Light from the surface to the eye is absorbed per channel too: far things go teal before they fog.
   c *= exp(-dist * vec3(0.035, 0.012, 0.008));
   c = mix(c, base * (1.1 + 1.6 * uGlow), uEmissive);
-  float f = fogF(dist) * (1.0 - uEmissive * 0.4);
+  float f = fogF(dist * uFogMul) * (1.0 - uEmissive * 0.4);
   c = mix(c, wc, f);
   // Any NaN/Inf left (driver differences) becomes the water colour: comparisons with NaN are false.
   if (!(c.r >= 0.0 && c.r < 1e4 && c.g >= 0.0 && c.g < 1e4 && c.b >= 0.0 && c.b < 1e4)) c = max(wc, vec3(0.0));
@@ -187,6 +187,8 @@ export interface ToonOpts {
   tent?: boolean;
   scull?: boolean;
   side?: THREE.Side;
+  /** < 1 thins the fog on this surface: huge animals read as silhouettes from further away. */
+  fogMul?: number;
 }
 
 export function toon(o: ToonOpts = {}): THREE.ShaderMaterial & { uniforms: Record<string, THREE.IUniform> } {
@@ -211,6 +213,7 @@ export function toon(o: ToonOpts = {}): THREE.ShaderMaterial & { uniforms: Recor
       uEmissive: { value: o.emissive ?? 0 },
       uCaustic: { value: o.caustic ?? 1 },
       uRim: { value: o.rim ?? 0.6 },
+      uFogMul: { value: o.fogMul ?? 1 },
       uSwayAmp: { value: o.sway ?? 0 },
       uSwimPhase: { value: 0 },
       uSwimAmp: { value: o.swimAmp ?? 0.07 },

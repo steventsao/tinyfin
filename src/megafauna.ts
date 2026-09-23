@@ -361,7 +361,7 @@ interface Creature {
   pos: THREE.Vector3; dir: THREE.Vector3; ready: boolean;
   gx: number; gy: number; tint: THREE.Color;
 }
-interface Encounter { creatures: Creature[]; noticed: boolean; nextSong: number }
+interface Encounter { creatures: Creature[]; noticed: boolean; nextSong: number; viewT: number }
 
 const CELL = 320;
 const UP = new THREE.Vector3(0, 1, 0), ZERO = new THREE.Vector3();
@@ -400,7 +400,7 @@ export class Megafauna {
       scene.add(m);
       return m;
     };
-    const opts = { vertexColors: true, mask: 1, rim: 0.9, side: THREE.DoubleSide, caustic: 0.7 } as const;
+    const opts = { vertexColors: true, mask: 1, rim: 1.1, side: THREE.DoubleSide, caustic: 0.7, fogMul: 0.5 } as const;
     this.species = [
       { key: "humpback", name: "Humpback whale", blurb: "15 metres. Sings the longest songs in the sea.", len: [11.5, 17], geoScale: 1, speed: 2.6,
         mesh: mk(whaleGeo("humpback"), toon({ ...opts, id: 20, swimv: true, swimAmp: 0.035, swimRate: 1.5 }), 8),
@@ -457,6 +457,17 @@ export class Megafauna {
 
   get total(): number { return this.species.length; }
 
+  /** Live positions of every nearby encounter, for the map. */
+  markers(): { x: number; z: number; key: string; name: string; seen: boolean }[] {
+    const out: { x: number; z: number; key: string; name: string; seen: boolean }[] = [];
+    for (const enc of this.active.values()) {
+      const cr = enc.creatures[0];
+      if (!cr || !cr.ready) continue;
+      out.push({ x: cr.pos.x, z: cr.pos.z, key: cr.sp.key, name: cr.sp.name, seen: this.seen.has(cr.sp.key) });
+    }
+    return out;
+  }
+
   /** Record a sighting (giant or common type); returns true the first time. Persists across visits. */
   note(key: string): boolean {
     if (this.seen.has(key)) return false;
@@ -504,7 +515,7 @@ export class Megafauna {
 
   private spawn(cx: number, cz: number, night: boolean, near?: THREE.Vector3): Encounter {
     const rnd = mulberry32(Math.floor(hash2(cx, cz, 777 + WORLD.seed) * 4294967295));
-    const enc: Encounter = { creatures: [], noticed: false, nextSong: 0 };
+    const enc: Encounter = { creatures: [], noticed: false, nextSong: 0, viewT: 0 };
     let sp: Species | undefined;
     if (near && this.forced) sp = this.species.find((s) => s.key === this.forced);
     else {
@@ -617,7 +628,11 @@ export class Megafauna {
         }
         const d = camera.position.distanceTo(cr.pos) - cr.L * 0.4;
         if (d < nearest) { nearest = d; near = cr; }
-        if (d < visible && this.frustum.intersectsSphere(this.sphere.set(cr.pos, cr.L * 0.3))) inView = true;
+        if (d < visible * 0.85) {
+          _a.copy(cr.pos).applyMatrix4(this.projView);
+          const w = cr.pos.x * this.projView.elements[3] + cr.pos.y * this.projView.elements[7] + cr.pos.z * this.projView.elements[11] + this.projView.elements[15];
+          if (w > 0 && Math.abs(_a.x) < 0.85 && Math.abs(_a.y) < 0.85) inView = true;
+        }
       }
       if (!enc.creatures.length) continue;
       const sp = enc.creatures[0].sp;
@@ -627,7 +642,9 @@ export class Megafauna {
         this.hint.pos.copy(near.pos);
         this.hint.dist = Math.max(0, nearest);
       }
-      if (!enc.noticed && inView) {
+      // Seen = held near the middle of the screen for a moment, not a one-frame glimpse.
+      enc.viewT = inView ? enc.viewT + dt : 0;
+      if (!enc.noticed && enc.viewT > 0.6) {
         enc.noticed = true;
         this.onSight({ sp, isNew: this.note(sp.key) });
       }

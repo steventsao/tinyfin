@@ -10,6 +10,7 @@ import { TimeOfDay } from "./tod";
 import { Audio } from "./audio";
 import { biome, biomeName, height } from "./terrain";
 import { Megafauna } from "./megafauna";
+import { SeaMap } from "./map";
 import { setWorldSeed, WORLD } from "./noise";
 
 const params = new URLSearchParams(location.search);
@@ -40,6 +41,8 @@ const bubbles = new Bubbles(scene);
 const input = new Input(renderer.domElement);
 const giants = new Megafauna(scene, params.get("encounter"));
 giants.loadModels(import.meta.env.BASE_URL);
+const seaMap = new SeaMap(document.body);
+document.getElementById("mapbtn")!.addEventListener("click", (e) => { e.stopPropagation(); seaMap.toggle(); });
 const audio = new Audio();
 
 // Build the whole first neighbourhood before the first frame.
@@ -123,7 +126,8 @@ addEventListener("touchstart", () => input.onAny(), { passive: true });
 
 input.onKey = (code) => {
   if (code === "KeyT") tod.next();
-  if (code === "KeyM") audio.toggleMute();
+  if (code === "KeyM") seaMap.toggle();
+  if (code === "KeyX") audio.toggleMute();
   if (code === "KeyB") { bubbles.emit(player.mouth, 8); audio.bloop(1.2); }
 };
 
@@ -223,6 +227,7 @@ function frame(now: number) {
   }
 
   post.render(scene, camera, t);
+  seaMap.draw(player.pos.x, player.pos.z, player.yaw, giants, t);
   if (!params.has("fixedres")) adapt(dt);
 }
 
