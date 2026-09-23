@@ -360,6 +360,8 @@ interface Creature {
   lag: number; side: number; dy: number; y: number; baseT: number;
   pos: THREE.Vector3; dir: THREE.Vector3; ready: boolean;
   gx: number; gy: number; tint: THREE.Color;
+  /** Gallery mode: held in place at home instead of swimming a loop. */
+  home?: THREE.Vector3;
 }
 interface Encounter { creatures: Creature[]; noticed: boolean; nextSong: number; viewT: number }
 
@@ -383,6 +385,7 @@ export class Megafauna {
   onClicks: (gain: number) => void = () => {};
   private forced: string | null;
   private forcedDone = false;
+  private galleryOn = false;
   private frustum = new THREE.Frustum();
   private projView = new THREE.Matrix4();
   private sphere = new THREE.Sphere();
@@ -557,6 +560,33 @@ export class Megafauna {
     return enc;
   }
 
+  /** ?gallery=1: every species in one row at true scale, smallest to largest, for checking models. */
+  gallery(origin: THREE.Vector3): { name: string; L: number; pos: THREE.Vector3 }[] {
+    this.galleryOn = true;
+    this.active.clear();
+    const order = ["mola", "whiteshark", "manta", "orca", "lionsmane", "squid", "whaleshark", "humpback", "sperm", "blue"];
+    const enc: Encounter = { creatures: [], noticed: true, nextSong: 999, viewT: 0 };
+    let x = origin.x - 70;
+    const z = origin.z + 26;
+    const out: { name: string; L: number; pos: THREE.Vector3 }[] = [];
+    for (const key of order) {
+      const sp = this.species.find((s) => s.key === key)!;
+      const L = (sp.len[0] + sp.len[1]) / 2;
+      const span = sp.key === "manta" || sp.key === "lionsmane" ? L * 0.6 : L;
+      x += span / 2;
+      const floor = height(x, z);
+      let y = Math.max(-12, floor + sp.clear + L * (sp.hang ?? 0.15));
+      y = Math.min(y, -1.5 - L * 0.08);
+      const home = new THREE.Vector3(x, y, z);
+      enc.creatures.push({ sp, L, c: new THREE.Vector2(), R: 1, w: 0, th0: 0, wob: out.length, lag: 0, side: 0, dy: 0, y, baseT: 0,
+        pos: home.clone(), dir: new THREE.Vector3(1, 0, 0), ready: true, gx: 1, gy: 1, tint: new THREE.Color(1, 1, 1), home });
+      out.push({ name: sp.name, L, pos: home });
+      x += span / 2 + 6;
+    }
+    this.active.set("gallery", enc);
+    return out;
+  }
+
   update(dt: number, t: number, player: THREE.Vector3, night: boolean, camera: THREE.Camera): void {
     this.projView.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
     this.frustum.setFromProjectionMatrix(this.projView);
@@ -565,11 +595,11 @@ export class Megafauna {
     this.hint.active = false;
     let hintD = 120;
     const cx = Math.floor(player.x / CELL), cz = Math.floor(player.z / CELL);
-    for (const k of this.active.keys()) {
+    if (!this.galleryOn) for (const k of this.active.keys()) {
       const [ix, iz] = k.split(",").map(Number);
       if (Math.abs(ix - cx) > 1 || Math.abs(iz - cz) > 1) this.active.delete(k);
     }
-    for (let dz = -1; dz <= 1; dz++)
+    if (!this.galleryOn) for (let dz = -1; dz <= 1; dz++)
       for (let dx = -1; dx <= 1; dx++) {
         const k = `${cx + dx},${cz + dz}`;
         if (this.active.has(k)) continue;
@@ -582,26 +612,32 @@ export class Megafauna {
     for (const enc of this.active.values()) {
       let nearest = Infinity, inView = false, near: Creature | null = null;
       for (const cr of enc.creatures) {
-        const th = cr.th0 + cr.w * t - Math.sign(cr.w) * cr.lag;
-        const rr = cr.R * (1 + 0.22 * Math.sin(th * 2 + cr.wob)) + cr.side;
-        const x = cr.c.x + Math.cos(th) * rr, z = cr.c.y + Math.sin(th) * rr;
-        const floor = height(x, z);
-        const bandY = lerp(cr.sp.band[0], cr.sp.band[1], cr.baseT);
-        let ty = (cr.sp.floorRel ? floor + bandY : bandY) + cr.dy + Math.sin(t * 0.07 + cr.wob) * 2;
-        ty = Math.max(ty, floor + cr.sp.clear + cr.L * (cr.sp.hang ?? 0.1));
-        ty = Math.min(ty, -1.5 - cr.L * 0.08);
-        if (!cr.ready) cr.y = ty;
-        cr.y += (ty - cr.y) * (1 - Math.exp(-dt * 0.6));
-        _p.set(x, cr.y, z);
-        if (cr.ready) {
-          _a.subVectors(_p, cr.pos);
-          if (_a.lengthSq() > 1e-8) cr.dir.lerp(_a.normalize(), 1 - Math.exp(-dt * 2));
+        if (cr.home) {
+          cr.pos.copy(cr.home);
+          cr.pos.y += Math.sin(t * 0.5 + cr.wob) * 0.3;
+          cr.ready = true;
         } else {
-          const th2 = th + Math.sign(cr.w) * 0.01;
-          cr.dir.set(cr.c.x + Math.cos(th2) * rr - x, 0, cr.c.y + Math.sin(th2) * rr - z).normalize();
+          const th = cr.th0 + cr.w * t - Math.sign(cr.w) * cr.lag;
+          const rr = cr.R * (1 + 0.22 * Math.sin(th * 2 + cr.wob)) + cr.side;
+          const x = cr.c.x + Math.cos(th) * rr, z = cr.c.y + Math.sin(th) * rr;
+          const floor = height(x, z);
+          const bandY = lerp(cr.sp.band[0], cr.sp.band[1], cr.baseT);
+          let ty = (cr.sp.floorRel ? floor + bandY : bandY) + cr.dy + Math.sin(t * 0.07 + cr.wob) * 2;
+          ty = Math.max(ty, floor + cr.sp.clear + cr.L * (cr.sp.hang ?? 0.1));
+          ty = Math.min(ty, -1.5 - cr.L * 0.08);
+          if (!cr.ready) cr.y = ty;
+          cr.y += (ty - cr.y) * (1 - Math.exp(-dt * 0.6));
+          _p.set(x, cr.y, z);
+          if (cr.ready) {
+            _a.subVectors(_p, cr.pos);
+            if (_a.lengthSq() > 1e-8) cr.dir.lerp(_a.normalize(), 1 - Math.exp(-dt * 2));
+          } else {
+            const th2 = th + Math.sign(cr.w) * 0.01;
+            cr.dir.set(cr.c.x + Math.cos(th2) * rr - x, 0, cr.c.y + Math.sin(th2) * rr - z).normalize();
+          }
+          cr.pos.copy(_p);
+          cr.ready = true;
         }
-        cr.pos.copy(_p);
-        cr.ready = true;
 
         const i = counts.get(cr.sp) ?? 0;
         if (i < cr.sp.mesh.instanceMatrix.count) {

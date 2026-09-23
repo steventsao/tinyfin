@@ -42,6 +42,24 @@ const input = new Input(renderer.domElement);
 const giants = new Megafauna(scene, params.get("encounter"));
 giants.loadModels(import.meta.env.BASE_URL);
 const seaMap = new SeaMap(document.body);
+// ?gallery=1: all giants in a row with labels; the fish hovers in front for scale.
+const GALLERY = params.has("gallery");
+const labels: { el: HTMLDivElement; pos: THREE.Vector3; L: number }[] = [];
+if (GALLERY) {
+  player.pos.y = -8;
+  player.hover = true;
+  G.uFogDist.value = 90; // clearer water, so the whole row reads
+  const rowFrom = player.pos.clone().add(new THREE.Vector3(0, 0, 20));
+  player.pos.z -= 0;
+  for (const g of giants.gallery(rowFrom)) {
+    const el = document.createElement("div");
+    el.className = "glabel";
+    el.innerHTML = `<b>${g.name}</b><span>${g.L.toFixed(1)} m</span>`;
+    document.body.appendChild(el);
+    labels.push({ el, pos: g.pos, L: g.L });
+  }
+}
+const lv = new THREE.Vector3();
 document.getElementById("mapbtn")!.addEventListener("click", (e) => { e.stopPropagation(); seaMap.toggle(); });
 const audio = new Audio();
 
@@ -228,6 +246,12 @@ function frame(now: number) {
 
   post.render(scene, camera, t);
   seaMap.draw(player.pos.x, player.pos.z, player.yaw, giants, t);
+  for (const l of labels) {
+    lv.copy(l.pos).add(camTarget.set(0, l.L * 0.12 + 1.2, 0)).project(camera);
+    const vis = lv.z < 1 && Math.abs(lv.x) < 1.1 && Math.abs(lv.y) < 1.1;
+    l.el.style.display = vis ? "block" : "none";
+    if (vis) l.el.style.transform = `translate(${(lv.x * 0.5 + 0.5) * innerWidth}px, ${(-lv.y * 0.5 + 0.5) * innerHeight}px) translate(-50%, -100%)`;
+  }
   if (!params.has("fixedres")) adapt(dt);
 }
 

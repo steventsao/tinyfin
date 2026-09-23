@@ -32,6 +32,8 @@ export class Player {
   static readonly BASE = 0.27;
   scale = Player.BASE;
   distance = 0;
+  /** Gallery mode: hold still unless W is pressed. */
+  hover = false;
   private roll = 0;
   private phase = 0;
   private yawRate = 0;
@@ -69,7 +71,8 @@ export class Player {
     this.pitch = clamp(this.pitch + steerY * 1.3 * dt, -1.2, 1.2);
 
     const boost = !auto && (inp.down("ShiftLeft") || inp.down("ShiftRight"));
-    const target = boost ? 8 : thrust > 0 ? 2.2 + thrust * 2.8 : thrust < 0 ? 0.4 : 2.2;
+    const cruise = this.hover ? 0 : 2.2;
+    const target = boost ? 8 : thrust > 0 ? 2.2 + thrust * 2.8 : thrust < 0 ? 0.4 * (this.hover ? 0 : 1) : cruise;
     this.speed += (target - this.speed) * (1 - Math.exp(-dt * (target > this.speed ? 2.2 : 1.4)));
 
     const cp = Math.cos(this.pitch);

@@ -27,6 +27,9 @@
     #map { position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%) scale(0.96); opacity: 0; pointer-events: none; transition: opacity 0.35s ease, transform 0.35s ease; border-radius: 50%; box-shadow: 0 10px 60px rgba(0, 10, 25, 0.55); }
     #map.on { opacity: 1; transform: translate(-50%, -50%) scale(1); }
     body.auto #mapbtn { display: none; }
+    .glabel { position: fixed; left: 0; top: 0; pointer-events: none; text-align: center; white-space: nowrap; text-shadow: 0 1px 8px rgba(0, 20, 40, 0.7); }
+    .glabel b { display: block; font-family: Fraunces, serif; font-weight: 400; font-size: 17px; }
+    .glabel span { font-size: 11px; letter-spacing: 0.12em; color: var(--dim); }
     #hint { position: fixed; left: 0; top: 0; pointer-events: none; opacity: 0; transition: opacity 0.8s ease; }
     #hint.on { opacity: 1; }
     #hint .ch { position: absolute; left: -14px; top: -22px; width: 28px; text-align: center; font-family: Fraunces, serif; font-size: 40px; line-height: 40px; color: var(--ink); text-shadow: 0 0 12px rgba(160, 230, 255, 0.8); animation: pulse 1.8s ease-in-out infinite; }
