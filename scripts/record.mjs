@@ -1,7 +1,7 @@
 // Record a shareable clip: exploration, then a giant's sighting. Frames are rendered one fixed step at a
 // time (the page clock is replaced), so the video is smooth whatever the machine load.
 //
-//   node scripts/record.mjs species=humpback seed=42 s=12 w=1920 h=1080 out=media/drift-humpback.mp4
+//   node scripts/record.mjs species=humpback seed=42 s=12 w=1920 h=1080 out=media/tinyfin-humpback.mp4
 import puppeteer from "puppeteer-core";
 import { mkdirSync, rmSync } from "node:fs";
 import { execFileSync } from "node:child_process";
@@ -9,7 +9,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 const arg = Object.fromEntries(process.argv.slice(2).map((a) => a.split("=")));
-const BASE = arg.url ?? "https://drift-ocean.steventsao.workers.dev/";
+const BASE = arg.url ?? "https://steventsao.github.io/tinyfin/";
 const SPECIES = arg.species ?? "humpback";
 const SEED = arg.seed ?? "42";
 const W = +(arg.w ?? 1920), H = +(arg.h ?? 1080), FPS = 30, SECONDS = +(arg.s ?? 12);
@@ -19,15 +19,15 @@ const CROSS = +(arg.cross ?? 0.25); // 0 = straight across the view, higher = mo
 const LIFT = +(arg.lift ?? 0.8);    // height above the fish, so it reads against open water
 const TIME = arg.time ? `&time=${arg.time}` : "";
 const CLEAN = arg.clean !== "0"; // hide the key hints and guide arrow for share clips // seconds of free exploration before heading for the giant
-const OUT = arg.out ?? `media/drift-${SPECIES}.mp4`;
-const FRAMES = join(tmpdir(), `drift-frames-${Date.now()}`);
+const OUT = arg.out ?? `media/tinyfin-${SPECIES}.mp4`;
+const FRAMES = join(tmpdir(), `tinyfin-frames-${Date.now()}`);
 mkdirSync(FRAMES, { recursive: true });
 mkdirSync("media", { recursive: true });
 
 const browser = await puppeteer.launch({
   executablePath: "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
   headless: true,
-  userDataDir: join(tmpdir(), `drift-rec-profile-${Date.now()}`),
+  userDataDir: join(tmpdir(), `tinyfin-rec-profile-${Date.now()}`),
   args: ["--use-angle=metal", "--enable-gpu", "--ignore-gpu-blocklist", `--window-size=${W},${H}`, "--hide-scrollbars"],
   defaultViewport: { width: W, height: H, deviceScaleFactor: 1 },
 });
@@ -42,7 +42,7 @@ await page.evaluateOnNewDocument(() => {
   window.cancelAnimationFrame = () => {};
   window.__step = (ms) => { now += ms; const cur = q; q = []; for (const cb of cur) cb(now); };
   // Common life counts as already seen, so the only title in the clip is the giant's.
-  try { localStorage.setItem("drift.seen", JSON.stringify(["clownfish", "plankton", "jellyfish", "schoolfish", "coral"])); } catch {}
+  try { localStorage.setItem("tinyfin.seen", JSON.stringify(["clownfish", "plankton", "jellyfish", "schoolfish", "coral"])); } catch {}
 });
 const url = `${BASE}?autopilot=1&fixedres=1&seed=${SEED}&encounter=${SPECIES}${TIME}`;
 await page.goto(url, { waitUntil: "networkidle0", timeout: 60000 });
@@ -60,7 +60,7 @@ console.log("GPU:", gpu);
 for (let i = 0; i < 200; i++) {
   const ready = await page.evaluate(() => {
     window.__step(33);
-    const g = window.__drift?.giants;
+    const g = window.__tinyfin?.giants;
     return !!g && g.species.filter((s) => ["blue", "humpback", "sperm", "orca", "whiteshark", "whaleshark", "mola", "manta", "squid"].includes(s.key))
       .every((s) => s.mesh.geometry.getAttribute("color")?.itemSize === 4);
   });
@@ -73,7 +73,7 @@ let sightedAt = -1;
 for (let f = 0; f < total; f++) {
   const t = f / FPS;
   const info = await page.evaluate((t, ahead, side, cross, lift, key) => {
-    const d = window.__drift;
+    const d = window.__tinyfin;
     const sp = d.giants.species.find((s) => s.key === key);
     // A steady, gently wandering course: no sudden turns.
     window.__yaw0 ??= d.player.yaw;

@@ -1,5 +1,5 @@
 """
-Drift creature models, built from published proportions (fractions of total length, or wingspan for the manta).
+tinyfin creature models, built from published proportions (fractions of total length, or wingspan for the manta).
 
 Run all:   /Applications/Blender.app/Contents/MacOS/Blender -b -P scripts/blender/species.py -- public/models
 Run one:   ... -- public/models orca

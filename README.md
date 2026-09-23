@@ -1,4 +1,4 @@
-# Drift
+# tinyfin
 
 An ocean with no edge. You are a small fish.
 

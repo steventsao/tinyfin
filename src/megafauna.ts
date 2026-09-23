@@ -402,7 +402,11 @@ export class Megafauna {
 
   constructor(scene: THREE.Scene, forced: string | null) {
     this.forced = forced;
-    try { (JSON.parse(localStorage.getItem("drift.seen") ?? "[]") as string[]).forEach((k) => this.seen.add(k)); } catch { /* storage unavailable */ }
+    // "drift.seen" is the key from before the rename; read both so earlier sightings carry over.
+    try {
+      for (const key of ["tinyfin.seen", "drift.seen"])
+        (JSON.parse(localStorage.getItem(key) ?? "[]") as string[]).forEach((k) => this.seen.add(k));
+    } catch { /* storage unavailable */ }
     const mk = (geo: THREE.BufferGeometry, mat: THREE.Material, cap: number) => {
       const m = new THREE.InstancedMesh(geo, mat, cap);
       m.frustumCulled = false;
@@ -494,7 +498,7 @@ export class Megafauna {
   note(key: string): boolean {
     if (this.seen.has(key)) return false;
     this.seen.add(key);
-    try { localStorage.setItem("drift.seen", JSON.stringify([...this.seen])); } catch { /* storage unavailable */ }
+    try { localStorage.setItem("tinyfin.seen", JSON.stringify([...this.seen])); } catch { /* storage unavailable */ }
     return true;
   }
 

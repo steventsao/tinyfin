@@ -46,7 +46,7 @@ giants.loadModels(import.meta.env.BASE_URL);
 const seaMap = new SeaMap(document.body);
 // /debug/species (or ?gallery=1): all giants in a row with labels; the fish hovers in front for scale.
 // /debug/species/<key> starts in front of that one species.
-// Strip the deploy base (e.g. /drift-ocean/ on GitHub Pages) before reading the route.
+// Strip the deploy base (e.g. /tinyfin/ on GitHub Pages) before reading the route.
 const base = import.meta.env.BASE_URL;
 const path = location.pathname.startsWith(base) ? location.pathname.slice(base.length - 1) : location.pathname;
 const route = path.replace(/\/+$/, "").split("/").filter(Boolean);
@@ -276,4 +276,4 @@ function frame(now: number) {
 // Compile every program behind the intro so the first swim doesn't stall.
 renderer.compile(scene, camera);
 requestAnimationFrame((n) => { last = n; frame(n); });
-(window as unknown as { __drift: unknown }).__drift = { player, world, renderer, giants, camera, terrain: { height, biome } };
+(window as unknown as { __tinyfin: unknown }).__tinyfin = { player, world, renderer, giants, camera, terrain: { height, biome } };

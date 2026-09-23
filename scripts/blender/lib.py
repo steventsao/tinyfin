@@ -1,5 +1,5 @@
 """
-Shared Blender helpers for the Drift creature models.
+Shared Blender helpers for the tinyfin creature models.
 
 Game axes throughout: +z = forward (snout), +y = up, x = side. `gl()` maps them to Blender axes so the
 glTF exporter's Y-up conversion lands them back. Every model is normalised to a length (or span) of 1;
