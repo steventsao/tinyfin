@@ -6,7 +6,8 @@
   "scripts": {
     "build": "tsc --noEmit && vite build",
     "typecheck": "tsc --noEmit",
-    "deploy": "pnpm build && wrangler deploy"
+    "deploy": "pnpm build && wrangler deploy",
+    "dev": "vite"
   },
   "dependencies": {
     "three": "^0.180.0"
@@ -15,5 +16,6 @@
     "@types/three": "^0.180.0",
     "typescript": "^5.9.0",
     "vite": "^7.1.0"
-  }
+  },
+  "license": "MIT"
 }
