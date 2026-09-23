@@ -81,6 +81,29 @@ const COMMON: { key: string; name: string; blurb: string; seen: () => boolean }[
   { key: "coral", name: "Coral", blurb: "Animals, not plants: colonies of tiny polyps building stone.", seen: () => biome(player.pos.x, player.pos.z).reef > 0.45 },
 ];
 let commonT = 3.5;
+
+// Guide: a soft arrow at the screen edge toward the nearest unseen giant, with its distance.
+const hintEl = document.getElementById("hint")!;
+const hv = new THREE.Vector3();
+function guide() {
+  const h = giants.hint;
+  if (!h.active || AUTO) { hintEl.classList.remove("on"); return; }
+  hv.copy(h.pos).project(camera);
+  const behind = hv.z > 1;
+  let x = behind ? -hv.x : hv.x, y = behind ? -hv.y : hv.y;
+  const onScreen = !behind && Math.abs(x) < 0.85 && Math.abs(y) < 0.8;
+  if (onScreen && h.dist < 45) { hintEl.classList.remove("on"); return; }
+  if (behind && Math.abs(x) < 0.05) x = 0.05;
+  // Push the point out to an inset ellipse at the screen edge.
+  const k = 1 / Math.max(Math.hypot(x / 0.86, y / 0.78), 1e-3);
+  if (!onScreen) { x *= k; y *= k; }
+  const px = (x * 0.5 + 0.5) * innerWidth, py = (-y * 0.5 + 0.5) * innerHeight;
+  const ang = Math.atan2(-y, x);
+  hintEl.style.transform = `translate(${px}px, ${py}px)`;
+  (hintEl.firstElementChild as HTMLElement).style.transform = `rotate(${onScreen ? Math.PI / 2 : ang}rad)`;
+  hintEl.lastElementChild!.textContent = `${Math.round(h.dist / 5) * 5} m`;
+  hintEl.classList.add("on");
+}
 giants.onSong = (pitch, gain) => audio.song(pitch, gain);
 giants.onClicks = (gain) => audio.clicks(gain);
 const intro = document.getElementById("intro")!;
@@ -159,7 +182,9 @@ function frame(now: number) {
   if (bubbleT < 0) { bubbles.emit(player.mouth, 2 + Math.floor(Math.random() * 3)); bubbleT = 1 + Math.random() * 2.5; }
   bubbles.update(dt, t);
   tod.update(dt);
-  giants.update(dt, t, player.pos, tod.name === "Night");
+  camera.updateMatrixWorld();
+  giants.update(dt, t, player.pos, tod.name === "Night", camera);
+  guide();
   commonT -= dt;
   if (commonT < 0) {
     commonT = 0.5;

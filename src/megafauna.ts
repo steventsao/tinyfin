@@ -2,7 +2,7 @@ import * as THREE from "three";
 import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { DRACOLoader } from "three/addons/loaders/DRACOLoader.js";
-import { toon } from "./mat";
+import { toon, G } from "./mat";
 import { prep } from "./geo";
 import { biome, height, type Biome } from "./terrain";
 import { hash2, mulberry32, smoothstep, lerp, WORLD } from "./noise";
@@ -383,6 +383,11 @@ export class Megafauna {
   onClicks: (gain: number) => void = () => {};
   private forced: string | null;
   private forcedDone = false;
+  private frustum = new THREE.Frustum();
+  private projView = new THREE.Matrix4();
+  private sphere = new THREE.Sphere();
+  /** Nearest giant not yet seen in this encounter, for the on-screen guide. */
+  readonly hint = { active: false, pos: new THREE.Vector3(), dist: 0 };
 
   constructor(scene: THREE.Scene, forced: string | null) {
     this.forced = forced;
@@ -541,7 +546,13 @@ export class Megafauna {
     return enc;
   }
 
-  update(dt: number, t: number, player: THREE.Vector3, night: boolean): void {
+  update(dt: number, t: number, player: THREE.Vector3, night: boolean, camera: THREE.Camera): void {
+    this.projView.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
+    this.frustum.setFromProjectionMatrix(this.projView);
+    // A giant counts as seen only when it is on screen and close enough to show through the fog.
+    const visible = G.uFogDist.value * 0.6;
+    this.hint.active = false;
+    let hintD = 120;
     const cx = Math.floor(player.x / CELL), cz = Math.floor(player.z / CELL);
     for (const k of this.active.keys()) {
       const [ix, iz] = k.split(",").map(Number);
@@ -558,7 +569,7 @@ export class Megafauna {
 
     const counts = new Map<Species, number>();
     for (const enc of this.active.values()) {
-      let nearest = Infinity;
+      let nearest = Infinity, inView = false, near: Creature | null = null;
       for (const cr of enc.creatures) {
         const th = cr.th0 + cr.w * t - Math.sign(cr.w) * cr.lag;
         const rr = cr.R * (1 + 0.22 * Math.sin(th * 2 + cr.wob)) + cr.side;
@@ -604,11 +615,19 @@ export class Megafauna {
           const d = _p.length();
           if (d < r && d > 1e-4) player.addScaledVector(_p, (r - d) / d);
         }
-        nearest = Math.min(nearest, player.distanceTo(cr.pos) - cr.L * 0.5);
+        const d = camera.position.distanceTo(cr.pos) - cr.L * 0.4;
+        if (d < nearest) { nearest = d; near = cr; }
+        if (d < visible && this.frustum.intersectsSphere(this.sphere.set(cr.pos, cr.L * 0.3))) inView = true;
       }
       if (!enc.creatures.length) continue;
       const sp = enc.creatures[0].sp;
-      if (!enc.noticed && nearest < 38) {
+      if (!enc.noticed && near && nearest < hintD) {
+        hintD = nearest;
+        this.hint.active = true;
+        this.hint.pos.copy(near.pos);
+        this.hint.dist = Math.max(0, nearest);
+      }
+      if (!enc.noticed && inView) {
         enc.noticed = true;
         this.onSight({ sp, isNew: this.note(sp.key) });
       }

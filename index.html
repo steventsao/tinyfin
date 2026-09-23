@@ -23,6 +23,12 @@
     #food-wrap .row { font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--dim); }
     body.auto #hud, body.auto #food-wrap, body.auto #keys { display: none; }
     #food-wrap .row b { color: var(--ink); font-weight: 500; }
+    #hint { position: fixed; left: 0; top: 0; pointer-events: none; opacity: 0; transition: opacity 0.8s ease; }
+    #hint.on { opacity: 1; }
+    #hint .ch { position: absolute; left: -14px; top: -22px; width: 28px; text-align: center; font-family: Fraunces, serif; font-size: 40px; line-height: 40px; color: var(--ink); text-shadow: 0 0 12px rgba(160, 230, 255, 0.8); animation: pulse 1.8s ease-in-out infinite; }
+    #hint .d { position: absolute; left: -40px; top: 20px; width: 80px; text-align: center; font-size: 11px; letter-spacing: 0.12em; color: var(--dim); }
+    @keyframes pulse { 50% { opacity: 0.45; } }
+    body.auto #hint { display: none; }
     #toast { position: fixed; left: 50%; top: 16%; transform: translate(-50%, 8px); text-align: center; pointer-events: none; opacity: 0; transition: opacity 1.2s ease, transform 1.2s ease; text-shadow: 0 2px 14px rgba(0, 20, 40, 0.6); width: min(92vw, 560px); }
     #toast.on { opacity: 1; transform: translate(-50%, 0); }
     #toast .k { font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--dim); }
@@ -50,6 +56,7 @@
   </div>
   <div id="food-wrap"><div id="seen">1</div><div class="row">species seen</div></div>
   <div id="toast"></div>
+  <div id="hint"><div class="ch">&rsaquo;</div><div class="d"></div></div>
   <div id="keys">steer: mouse or finger · W faster · shift dash · space / C rise, sink · T time · B bubbles · M mute</div>
   <div id="intro">
     <div class="card">
