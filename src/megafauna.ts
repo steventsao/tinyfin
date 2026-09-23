@@ -184,7 +184,9 @@ function spermGeo(): THREE.BufferGeometry {
   };
   const r = (t: number) => {
     const rise = Math.pow(smoothstep(0.0, 0.5, t), 0.75);
-    const blunt = 1 - smoothstep(0.965, 1.0, t) * 0.55;
+    // Square-ish forehead that rounds off over the last few percent, not a cut-off pipe.
+    const f = smoothstep(0.9, 1.0, t);
+    const blunt = Math.sqrt(Math.max(0, 1 - f * f * 0.97));
     return 0.1 * Math.max(0.05, rise) * blunt;
   };
   const parts = [body(r, 0.82, 1.0, col, -0.5, 0.5, 64, 26)];

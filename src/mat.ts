@@ -92,7 +92,13 @@ void main(){
   #ifdef JELLY
     float pulse = sin(uTime * 2.2 + seed);
     if (p.y > 0.0) { p.xz *= 1.0 - 0.16 * pulse * (1.05 - p.y); p.y *= 1.0 + 0.08 * pulse; }
-    else { p.x += sin(uTime * 1.3 + p.y * 1.6 + seed) * 0.22 * uSwimAmp * (-p.y); p.z += cos(uTime * 1.1 + p.y * 1.3 + seed) * 0.18 * uSwimAmp * (-p.y); }
+    else {
+      // Each strand gets its own phase from where it hangs, and the curtain flares out as it trails.
+      float strand = p.x * 9.0 + p.z * 7.0;
+      p.xz *= 1.0 + (-p.y) * 0.035;
+      p.x += sin(uTime * 1.3 + p.y * 1.6 + seed + strand) * 0.22 * uSwimAmp * (-p.y);
+      p.z += cos(uTime * 1.1 + p.y * 1.3 + seed + strand * 1.3) * 0.18 * uSwimAmp * (-p.y);
+    }
   #endif
   vec4 w = m * vec4(p, 1.0);
   #ifdef SWAY
