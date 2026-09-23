@@ -42,7 +42,10 @@ out vec3 vWorld; out vec3 vN; out vec3 vCol;
 void main(){
   vec3 p = position;
   vec3 col = uColor;
-  #ifdef USE_COLOR
+  // glTF vertex colours arrive as RGBA (USE_COLOR_ALPHA → vec4); code-built geometry is RGB.
+  #if defined(USE_COLOR_ALPHA)
+    col *= color.rgb;
+  #elif defined(USE_COLOR)
     col *= color;
   #endif
   #ifdef USE_INSTANCING_COLOR
