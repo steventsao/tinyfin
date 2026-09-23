@@ -55,13 +55,11 @@ export class Player {
       this.pitch += (clamp((want - this.pos.y) * 0.08, -0.5, 0.5) - this.pitch) * dt * 1.5;
       thrust = 0.4;
     } else {
-      const m = inp.takeMouse();
-      this.yaw -= m.x * 0.0022;
-      this.pitch = clamp(this.pitch - m.y * 0.0022, -1.2, 1.2);
+      const m = inp.mouseSteer();
       steerX = (inp.down("KeyA") || inp.down("ArrowLeft") ? 1 : 0) - (inp.down("KeyD") || inp.down("ArrowRight") ? 1 : 0);
-      steerX += inp.touch.x;
+      steerX += inp.touch.x + m.x;
       steerY = (inp.down("Space") || inp.down("KeyE") ? 1 : 0) - (inp.down("KeyC") || inp.down("KeyQ") || inp.down("ControlLeft") ? 1 : 0);
-      steerY += inp.touch.y;
+      steerY += inp.touch.y + m.y;
       thrust = inp.down("KeyW") || inp.down("ArrowUp") || inp.touch.active ? 1 : inp.down("KeyS") || inp.down("ArrowDown") ? -1 : 0;
     }
     this.yawRate += (steerX * 1.7 - this.yawRate) * (1 - Math.exp(-dt * 6));

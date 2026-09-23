@@ -49,24 +49,21 @@ const hud = {
   time: document.getElementById("time")!,
 };
 const intro = document.getElementById("intro")!;
-let started = AUTO;
+// No start gate: the fish swims from the first frame. The title fades by itself or on first input.
+let introUp = !AUTO;
 if (AUTO) { intro.remove(); document.body.classList.add("auto"); }
-
-function begin() {
-  audio.start();
-  if (!started) {
-    started = true;
-    intro.classList.add("gone");
-    setTimeout(() => intro.remove(), 900);
-  }
-  if (!matchMedia("(pointer: coarse)").matches) renderer.domElement.requestPointerLock?.();
+function dismissIntro() {
+  if (!introUp) return;
+  introUp = false;
+  intro.classList.add("gone");
+  setTimeout(() => intro.remove(), 1200);
 }
-intro.addEventListener("click", begin);
-renderer.domElement.addEventListener("click", begin);
-renderer.domElement.addEventListener("touchstart", () => { audio.start(); if (!started) begin(); }, { passive: true });
+setTimeout(dismissIntro, 4000);
+// Audio may only start inside a user gesture: the first key, click or touch anywhere.
+input.onAny = () => { audio.start(); dismissIntro(); };
+addEventListener("touchstart", () => input.onAny(), { passive: true });
 
 input.onKey = (code) => {
-  if (!started && (code === "Enter" || code === "Space")) begin();
   if (code === "KeyT") tod.next();
   if (code === "KeyM") audio.toggleMute();
   if (code === "KeyB") { bubbles.emit(player.mouth, 8); audio.bloop(1.2); }
@@ -84,6 +81,28 @@ fx.pxScale.value = innerHeight * renderer.getPixelRatio() * 0.6;
 const camTarget = new THREE.Vector3(), look = new THREE.Vector3(), lookS = new THREE.Vector3().copy(player.pos);
 let t = 0, last = performance.now(), bubbleT = 1, hudT = 0;
 
+// Adaptive resolution (after clearwater): scale the render down when frames run long, back up when they don't.
+const basePR = renderer.getPixelRatio();
+let ftSum = 0, ftN = 0, cooldown = 3;
+function adapt(dt: number) {
+  ftSum += dt; ftN++;
+  cooldown -= dt;
+  if (ftN < 60 || cooldown > 0) return;
+  const ms = (ftSum / ftN) * 1000;
+  ftSum = ftN = 0;
+  const pr = renderer.getPixelRatio();
+  let next = pr;
+  if (ms > 22 && pr > basePR * 0.45) next = Math.max(basePR * 0.45, pr * 0.85);
+  else if (ms < 17.5 && pr < basePR) next = Math.min(basePR, pr * 1.08);
+  if (next !== pr) {
+    renderer.setPixelRatio(next);
+    renderer.setSize(innerWidth, innerHeight);
+    post.setSize(innerWidth, innerHeight);
+    fx.pxScale.value = innerHeight * next * 0.6;
+    cooldown = 2.5;
+  }
+}
+
 function frame(now: number) {
   requestAnimationFrame(frame);
   const dt = Math.min((now - last) / 1000, 1 / 20);
@@ -91,7 +110,7 @@ function frame(now: number) {
   t += dt;
   G.uTime.value = t;
 
-  if (started) player.update(dt, t, input, AUTO);
+  player.update(dt, t, input, AUTO);
   world.update(player.pos.x, player.pos.z, 1);
   schools.update(dt, t, player.pos, player.fwd, player.speed);
   jellies.update(dt, t, player.pos, player.fwd);
@@ -131,6 +150,7 @@ function frame(now: number) {
   }
 
   post.render(scene, camera, t);
+  if (!params.has("fixedres")) adapt(dt);
 }
 
 // Compile every program behind the intro so the first swim doesn't stall.

@@ -23,7 +23,7 @@
     #food-wrap .row { font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--dim); }
     body.auto #hud, body.auto #food-wrap, body.auto #keys { display: none; }
     #keys { position: fixed; left: 50%; bottom: 16px; transform: translateX(-50%); font-size: 11px; letter-spacing: 0.1em; color: var(--dim); pointer-events: none; white-space: nowrap; }
-    #intro { position: fixed; inset: 0; display: grid; place-items: center; cursor: pointer;
+    #intro { position: fixed; inset: 0; display: grid; place-items: center; pointer-events: none;
       background: radial-gradient(ellipse at 50% 20%, rgba(80, 200, 220, 0.2), rgba(2, 20, 36, 0.55) 70%); transition: opacity 0.9s ease; }
     #intro.gone { opacity: 0; pointer-events: none; }
     #intro .card { text-align: center; padding: 0 20px; }
@@ -32,8 +32,7 @@
     #intro .go { display: inline-block; border: 1px solid rgba(234, 247, 246, 0.45); border-radius: 999px; padding: 11px 26px; font-size: 13px; letter-spacing: 0.16em; text-transform: uppercase; }
     #intro .ctl { margin-top: 30px; font-size: 12px; line-height: 1.9; color: var(--dim); letter-spacing: 0.04em; }
     #intro .ctl kbd { font-family: inherit; border: 1px solid rgba(234, 247, 246, 0.3); border-radius: 4px; padding: 0 5px; color: var(--ink); }
-    @media (pointer: coarse) { .desk { display: none; } #keys { display: none; } }
-    @media (pointer: fine) { .touch { display: none; } }
+    @media (pointer: coarse) { #keys { display: none; } }
   </style>
 </head>
 <body>
@@ -44,14 +43,12 @@
     <div class="row" id="time"></div>
   </div>
   <div id="food-wrap"><div id="food">0</div><div class="row">plankton</div></div>
-  <div id="keys">mouse steer · W faster · shift dash · space / C rise, sink · T time · B bubbles · M mute</div>
+  <div id="keys">steer: mouse or finger · W faster · shift dash · space / C rise, sink · T time · B bubbles · M mute</div>
   <div id="intro">
     <div class="card">
       <h1>Drift</h1>
       <p>An ocean with no edge. You are a small fish.</p>
-      <span class="go desk">Click to swim</span><span class="go touch">Tap to swim</span>
-      <div class="ctl desk"><kbd>Mouse</kbd> steer &nbsp; <kbd>W</kbd> faster &nbsp; <kbd>Shift</kbd> dash &nbsp; <kbd>Space</kbd>/<kbd>C</kbd> rise, sink<br /><kbd>T</kbd> time of day &nbsp; <kbd>B</kbd> bubbles &nbsp; <kbd>M</kbd> mute &nbsp; eat the glowing plankton to grow</div>
-      <div class="ctl touch">Hold and drag to swim and steer.<br />Eat the glowing plankton to grow.</div>
+      <div class="ctl">Steer with the mouse or a finger &nbsp;·&nbsp; <kbd>W</kbd> or hold to swim faster &nbsp;·&nbsp; <kbd>Shift</kbd> dash<br />Eat the glowing plankton to grow &nbsp;·&nbsp; <kbd>T</kbd> time of day &nbsp;·&nbsp; <kbd>M</kbd> mute</div>
     </div>
   </div>
   <script type="module" src="/src/main.ts"></script>

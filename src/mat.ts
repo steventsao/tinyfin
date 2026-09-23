@@ -106,16 +106,24 @@ void main(){
   float ndl = dot(N, uSunDir);
   // Three cel bands, each a narrow smoothstep so the terminator is drawn, not aliased.
   float band = smoothstep(-0.1, 0.0, ndl) * 0.55 + smoothstep(0.42, 0.5, ndl) * 0.45;
-  float att = exp(min(vWorld.y, 0.0) * 0.022);
+  // Sunlight loses red first on its way down (per-channel Beer-Lambert, after clearwater).
+  vec3 att = exp(min(vWorld.y, 0.0) * vec3(0.05, 0.022, 0.013));
   vec3 base = vCol;
   vec3 amb = mix(uAmbBot, uAmbTop, N.y * 0.5 + 0.5);
   vec3 c = base * (amb + uSunCol * band * att);
-  float cz = net(vWorld.xz * 1.1, uTime * 1.1) * smoothstep(0.1, 0.7, N.y) * att * uCaustic;
-  cz *= 1.0 - smoothstep(22.0, 55.0, dist);
+  // Chromatic caustics: each channel refracts slightly differently, so the lines fringe.
+  vec3 cz = vec3(0.0);
+  if (uCaustic > 0.0 && N.y > 0.1 && dist < 55.0) {
+    vec2 cp = vWorld.xz * 1.1; float ct = uTime * 1.1;
+    cz = vec3(net(cp * 0.985, ct), net(cp, ct), net(cp * 1.015, ct));
+  }
+  cz *= smoothstep(0.1, 0.7, N.y) * att * uCaustic * (1.0 - smoothstep(22.0, 55.0, dist));
   c += base * uSunCol * cz * 0.45;
   float rim = pow(1.0 - max(dot(N, V), 0.0), 3.0) * uRim;
   vec3 wc = waterColor(-V, cameraPosition.y);
   c += rim * wc * 0.7;
+  // Light from the surface to the eye is absorbed per channel too: far things go teal before they fog.
+  c *= exp(-dist * vec3(0.035, 0.012, 0.008));
   c = mix(c, base * (1.1 + 1.6 * uGlow), uEmissive);
   float f = fogF(dist) * (1.0 - uEmissive * 0.4);
   c = mix(c, wc, f);
