@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <title>Drift</title>
+  <meta name="description" content="An endless, procedurally generated ocean. You are a small fish." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,500;1,9..144,300&family=Inter:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    :root { --ink: #eaf7f6; --dim: rgba(234, 247, 246, 0.62); }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; height: 100%; overflow: hidden; background: #06243a; color: var(--ink); font-family: Inter, system-ui, sans-serif; }
+    #app, canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+    #hud { position: fixed; left: 22px; top: 18px; pointer-events: none; text-shadow: 0 1px 8px rgba(0, 20, 40, 0.5); }
+    #hud .zone { font-family: Fraunces, serif; font-style: italic; font-weight: 300; font-size: 26px; letter-spacing: 0.01em; }
+    #hud .row { font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--dim); margin-top: 4px; font-variant-numeric: tabular-nums; }
+    #hud .row b { color: var(--ink); font-weight: 500; }
+    #food-wrap { position: fixed; right: 22px; top: 18px; text-align: right; pointer-events: none; text-shadow: 0 1px 8px rgba(0, 20, 40, 0.5); }
+    #food { font-family: Fraunces, serif; font-size: 30px; font-weight: 300; }
+    #food-wrap .row { font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--dim); }
+    body.auto #hud, body.auto #food-wrap, body.auto #keys { display: none; }
+    #keys { position: fixed; left: 50%; bottom: 16px; transform: translateX(-50%); font-size: 11px; letter-spacing: 0.1em; color: var(--dim); pointer-events: none; white-space: nowrap; }
+    #intro { position: fixed; inset: 0; display: grid; place-items: center; cursor: pointer;
+      background: radial-gradient(ellipse at 50% 20%, rgba(80, 200, 220, 0.2), rgba(2, 20, 36, 0.55) 70%); transition: opacity 0.9s ease; }
+    #intro.gone { opacity: 0; pointer-events: none; }
+    #intro .card { text-align: center; padding: 0 20px; }
+    #intro h1 { font-family: Fraunces, serif; font-weight: 300; font-size: clamp(64px, 13vw, 150px); margin: 0; letter-spacing: -0.02em; line-height: 0.9; }
+    #intro p { font-family: Fraunces, serif; font-style: italic; font-weight: 300; font-size: clamp(17px, 2.4vw, 22px); color: var(--dim); margin: 14px 0 34px; }
+    #intro .go { display: inline-block; border: 1px solid rgba(234, 247, 246, 0.45); border-radius: 999px; padding: 11px 26px; font-size: 13px; letter-spacing: 0.16em; text-transform: uppercase; }
+    #intro .ctl { margin-top: 30px; font-size: 12px; line-height: 1.9; color: var(--dim); letter-spacing: 0.04em; }
+    #intro .ctl kbd { font-family: inherit; border: 1px solid rgba(234, 247, 246, 0.3); border-radius: 4px; padding: 0 5px; color: var(--ink); }
+    @media (pointer: coarse) { .desk { display: none; } #keys { display: none; } }
+    @media (pointer: fine) { .touch { display: none; } }
+  </style>
+</head>
+<body>
+  <div id="app"></div>
+  <div id="hud">
+    <div class="zone" id="zone">—</div>
+    <div class="row">Depth <b id="depth">0 m</b> · <span id="dist">0 m swum</span></div>
+    <div class="row" id="time"></div>
+  </div>
+  <div id="food-wrap"><div id="food">0</div><div class="row">plankton</div></div>
+  <div id="keys">mouse steer · W faster · shift dash · space / C rise, sink · T time · B bubbles · M mute</div>
+  <div id="intro">
+    <div class="card">
+      <h1>Drift</h1>
+      <p>An ocean with no edge. You are a small fish.</p>
+      <span class="go desk">Click to swim</span><span class="go touch">Tap to swim</span>
+      <div class="ctl desk"><kbd>Mouse</kbd> steer &nbsp; <kbd>W</kbd> faster &nbsp; <kbd>Shift</kbd> dash &nbsp; <kbd>Space</kbd>/<kbd>C</kbd> rise, sink<br /><kbd>T</kbd> time of day &nbsp; <kbd>B</kbd> bubbles &nbsp; <kbd>M</kbd> mute &nbsp; eat the glowing plankton to grow</div>
+      <div class="ctl touch">Hold and drag to swim and steer.<br />Eat the glowing plankton to grow.</div>
+    </div>
+  </div>
+  <script type="module" src="/src/main.ts"></script>
+</body>
+</html>
