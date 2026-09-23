@@ -112,7 +112,7 @@ void main(){
   vec3 c = base * (amb + uSunCol * band * att);
   float cz = net(vWorld.xz * 1.1, uTime * 1.1) * smoothstep(0.1, 0.7, N.y) * att * uCaustic;
   cz *= 1.0 - smoothstep(22.0, 55.0, dist);
-  c += base * uSunCol * cz * 0.6;
+  c += base * uSunCol * cz * 0.45;
   float rim = pow(1.0 - max(dot(N, V), 0.0), 3.0) * uRim;
   vec3 wc = waterColor(-V, cameraPosition.y);
   c += rim * wc * 0.7;

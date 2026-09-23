@@ -123,10 +123,10 @@ export class World {
 
     // Coral: dense on the reef, sparse elsewhere, never in the deep.
     this.corals.forEach((cg, k) => {
-      const weight = [0.55, 0.4, 0.35, 0.35, 0.3][k];
-      emit(cg.geo, cg.mat, place(110, (x, z) => { const b = biome(x, z); return (b.reef * weight + b.kelp * 0.03 + b.flats * 0.02) * (0.4 + 0.6 * smoothstep(0.3, 0.6, vnoise(x / 11, z / 11, 20 + k))); }, (x, y, z, l) => {
+      const weight = [0.7, 0.5, 0.45, 0.45, 0.45][k];
+      emit(cg.geo, cg.mat, place(170, (x, z) => { const b = biome(x, z); return (b.reef * weight + b.kelp * 0.03 + b.flats * 0.02) * smoothstep(0.32, 0.55, vnoise(x / 9, z / 9, 20 + k)); }, (x, y, z, l) => {
         q.setFromAxisAngle(up, rnd() * 6.28);
-        const sc = (k === 1 ? 0.8 : 1.1) * (0.6 + rnd() * 1.4) * (k === 2 ? 1.8 : 1);
+        const sc = (k === 1 ? 1.2 : 1.6) * (0.6 + rnd() * 1.5) * (k === 2 ? 1.6 : 1);
         s.set(sc, sc * (0.8 + rnd() * 0.5), sc);
         const cc = CORAL_COLS[Math.floor(rnd() * CORAL_COLS.length)].clone().multiplyScalar(0.85 + rnd() * 0.3);
         l.push({ m: new THREE.Matrix4().compose(v.set(x, y - 0.1, z), q, s), c: cc });

@@ -33,9 +33,9 @@ export class Post {
     this.ink = new ShaderPass({
       uniforms: {
         tDiffuse: { value: null },
-        tColor: { value: this.mrt.textures[0] },
-        tNormal: { value: this.mrt.textures[1] },
-        tDepth: { value: this.mrt.depthTexture },
+        tColor: { value: null },
+        tNormal: { value: null },
+        tDepth: { value: null },
         uRes: { value: new THREE.Vector2(W, H) },
         uNear: { value: 0.1 },
         uFar: { value: 1500 },
@@ -108,9 +108,13 @@ export class Post {
           gl_FragColor = vec4(col, 1.0);
         }`,
     });
+    // ShaderPass clones uniforms and render-target textures don't clone: bind them afterwards.
+    this.ink.uniforms.tColor.value = this.mrt.textures[0];
+    this.ink.uniforms.tNormal.value = this.mrt.textures[1];
+    this.ink.uniforms.tDepth.value = this.mrt.depthTexture;
     this.composer.addPass(this.ink);
 
-    this.bloom = new UnrealBloomPass(new THREE.Vector2(w / 2, h / 2), 0.55, 0.6, 0.82);
+    this.bloom = new UnrealBloomPass(new THREE.Vector2(w / 2, h / 2), 0.42, 0.5, 0.85);
     this.composer.addPass(this.bloom);
 
     this.grade = new ShaderPass({

@@ -108,12 +108,12 @@ function frame(now: number) {
 
   // Chase camera: behind and a little above, lagging on turns; never through the floor or surface.
   const s = player.scale;
-  camTarget.copy(player.pos).addScaledVector(player.fwd, -4.2 * s).add(look.set(0, 1.25 * s, 0));
+  camTarget.copy(player.pos).addScaledVector(player.fwd, -3.1 * s).add(look.set(0, 0.85 * s, 0));
   camera.position.lerp(camTarget, 1 - Math.exp(-dt * 3.2));
   const fl = height(camera.position.x, camera.position.z) + 0.7;
   if (camera.position.y < fl) camera.position.y = fl;
   if (camera.position.y > -0.5) camera.position.y = -0.5;
-  look.copy(player.pos).addScaledVector(player.fwd, 2.5 * s);
+  look.copy(player.pos).addScaledVector(player.fwd, 1.8 * s).add(camTarget.set(0, 0.25 * s, 0));
   lookS.lerp(look, 1 - Math.exp(-dt * 8));
   camera.lookAt(lookS);
   fx.update(camera);

@@ -75,7 +75,7 @@ export class Schools {
       const want = Math.min(-3, floor + 3 + (vnoise(t * 0.03, s.seed, 5) * 8));
       s.v.y += (THREE.MathUtils.clamp(want - s.c.y, -1, 1) - s.v.y) * dt;
       s.c.addScaledVector(s.v, dt);
-      if (s.c.distanceTo(player) > 140) spawnAround(s.c, player, fwd, 55, 90, 4);
+      if (s.c.distanceTo(player) > 110) spawnAround(s.c, player, fwd, 28, 55, 4);
       for (let i = 0; i < s.n; i++) {
         const f = s.members[i];
         if (f.p.distanceTo(s.c) > 60) f.p.copy(s.c).add(f.off);
@@ -147,7 +147,7 @@ export class Motes {
     const g = prep(new THREE.IcosahedronGeometry(0.16, 1), 0xffffff);
     this.mesh = new THREE.InstancedMesh(g, toon({ vertexColors: true, id: 9, mask: -1, emissive: 1, rim: 0 }), n);
     this.mesh.frustumCulled = false;
-    const cols = ["#d8ff8a", "#9dfcff", "#fff39a"].map((c) => new THREE.Color(c));
+    const cols = ["#d8ff8a", "#9dfcff", "#fff39a"].map((c) => new THREE.Color(c).multiplyScalar(0.5));
     for (let i = 0; i < n; i++) {
       this.ms.push({ p: new THREE.Vector3(), base: new THREE.Vector3(), ph: Math.random() * 6.28 });
       this.mesh.setColorAt(i, cols[i % 3]);

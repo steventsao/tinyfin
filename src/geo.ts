@@ -215,8 +215,7 @@ export function rockGeo(seed: number): THREE.BufferGeometry {
     v.y = v.y * 0.62 + 0.2;
     p.setXYZ(i, v.x, v.y, v.z);
   }
-  const n = g.toNonIndexed();
-  g.dispose();
+  const n = g.index ? g.toNonIndexed() : g;
   n.computeVertexNormals();
   return prep(n, (_x, y) => new THREE.Color(1, 1, 1).multiplyScalar(0.8 + 0.2 * Math.min(1, Math.max(0, y))));
 }
