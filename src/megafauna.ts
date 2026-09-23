@@ -561,14 +561,14 @@ export class Megafauna {
   }
 
   /** ?gallery=1: every species in one row at true scale, smallest to largest, for checking models. */
-  gallery(origin: THREE.Vector3): { name: string; L: number; pos: THREE.Vector3 }[] {
+  gallery(origin: THREE.Vector3): { key: string; name: string; L: number; pos: THREE.Vector3 }[] {
     this.galleryOn = true;
     this.active.clear();
     const order = ["mola", "whiteshark", "manta", "orca", "lionsmane", "squid", "whaleshark", "humpback", "sperm", "blue"];
     const enc: Encounter = { creatures: [], noticed: true, nextSong: 999, viewT: 0 };
     let x = origin.x - 70;
     const z = origin.z + 26;
-    const out: { name: string; L: number; pos: THREE.Vector3 }[] = [];
+    const out: { key: string; name: string; L: number; pos: THREE.Vector3 }[] = [];
     for (const key of order) {
       const sp = this.species.find((s) => s.key === key)!;
       const L = (sp.len[0] + sp.len[1]) / 2;
@@ -580,7 +580,7 @@ export class Megafauna {
       const home = new THREE.Vector3(x, y, z);
       enc.creatures.push({ sp, L, c: new THREE.Vector2(), R: 1, w: 0, th0: 0, wob: out.length, lag: 0, side: 0, dy: 0, y, baseT: 0,
         pos: home.clone(), dir: new THREE.Vector3(1, 0, 0), ready: true, gx: 1, gy: 1, tint: new THREE.Color(1, 1, 1), home });
-      out.push({ name: sp.name, L, pos: home });
+      out.push({ key: sp.key, name: sp.name, L, pos: home });
       x += span / 2 + 6;
     }
     this.active.set("gallery", enc);

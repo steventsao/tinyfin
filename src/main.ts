@@ -42,8 +42,11 @@ const input = new Input(renderer.domElement);
 const giants = new Megafauna(scene, params.get("encounter"));
 giants.loadModels(import.meta.env.BASE_URL);
 const seaMap = new SeaMap(document.body);
-// ?gallery=1: all giants in a row with labels; the fish hovers in front for scale.
-const GALLERY = params.has("gallery");
+// /debug/species (or ?gallery=1): all giants in a row with labels; the fish hovers in front for scale.
+// /debug/species/<key> starts in front of that one species.
+const route = location.pathname.replace(/\/+$/, "").split("/").filter(Boolean);
+const GALLERY = params.has("gallery") || (route[0] === "debug" && route[1] === "species");
+const focusKey = GALLERY ? route[2] ?? null : null;
 const labels: { el: HTMLDivElement; pos: THREE.Vector3; L: number }[] = [];
 if (GALLERY) {
   player.pos.y = -8;
@@ -51,7 +54,13 @@ if (GALLERY) {
   G.uFogDist.value = 90; // clearer water, so the whole row reads
   const rowFrom = player.pos.clone().add(new THREE.Vector3(0, 0, 20));
   player.pos.z -= 0;
-  for (const g of giants.gallery(rowFrom)) {
+  const row = giants.gallery(rowFrom);
+  const focus = focusKey ? row.find((g) => g.key === focusKey) : undefined;
+  if (focus) {
+    player.pos.set(focus.pos.x, focus.pos.y + 0.5, focus.pos.z - (focus.L * 0.9 + 4));
+    camera.position.copy(player.pos).add(new THREE.Vector3(0, 0.3, -1));
+  }
+  for (const g of row) {
     const el = document.createElement("div");
     el.className = "glabel";
     el.innerHTML = `<b>${g.name}</b><span>${g.L.toFixed(1)} m</span>`;
