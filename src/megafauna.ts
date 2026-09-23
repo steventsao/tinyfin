@@ -573,6 +573,7 @@ export class Megafauna {
           if (-height(c.x + Math.cos(a) * R * 1.22, c.y + Math.sin(a) * R * 1.22) < sp.minDepth * 0.9) ok = false;
         }
         if (ok) break;
+        if (tries === 8) return enc; // no loop fits in water this deep: no encounter here
         R = Math.max(10, R * 0.72);
       }
     }
