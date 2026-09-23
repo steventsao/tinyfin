@@ -270,4 +270,4 @@ function frame(now: number) {
 // Compile every program behind the intro so the first swim doesn't stall.
 renderer.compile(scene, camera);
 requestAnimationFrame((n) => { last = n; frame(n); });
-(window as unknown as { __drift: unknown }).__drift = { player, world, renderer, giants, camera };
+(window as unknown as { __drift: unknown }).__drift = { player, world, renderer, giants, camera, terrain: { height, biome } };
