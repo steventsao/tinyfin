@@ -2,7 +2,7 @@
 
 An ocean with no edge. You are a small fish.
 
-**Play: https://steventsao.github.io/drift-ocean/**
+**Play: https://steventsao.github.io/tinyfin/**
 
 A procedurally generated, endless underwater world in Three.js, drawn in a painterly toon style.
 Swim through coral reefs, kelp forests, sand flats and the deep, eat glowing plankton, and find
