@@ -51,6 +51,9 @@ export class Post {
         varying vec2 vUv;
         float linz(float d){ float z = d * 2.0 - 1.0; return 2.0 * uNear * uFar / (uFar + uNear - z * (uFar - uNear)); }
         float lum(vec3 c){ return dot(c, vec3(0.299, 0.587, 0.114)); }
+        // Scrub NaN/Inf and negatives from the scene target: one bad pixel must not blacken the frame.
+        vec3 safe(vec3 c){ return (c.r >= 0.0 && c.r < 1e4 && c.g >= 0.0 && c.g < 1e4 && c.b >= 0.0 && c.b < 1e4) ? c : vec3(0.0); }
+        vec3 samp(vec2 uv){ return safe(texture2D(tColor, uv).rgb); }
         vec4 kuwahara(vec2 uv){
           vec2 px = 1.0 / uRes;
           vec3 m[4]; float s[4];
@@ -58,7 +61,7 @@ export class Post {
             vec2 dir = vec2(k == 1 || k == 2 ? -1.0 : 1.0, k >= 2 ? -1.0 : 1.0);
             vec3 sum = vec3(0.0); float sq = 0.0;
             for (int j = 0; j <= 2; j++) for (int i = 0; i <= 2; i++){
-              vec3 c = texture2D(tColor, uv + vec2(float(i), float(j)) * dir * px).rgb;
+              vec3 c = samp(uv + vec2(float(i), float(j)) * dir * px);
               sum += c; float l = lum(c); sq += l * l;
             }
             vec3 mean = sum / 9.0; float lm = lum(mean);
@@ -72,7 +75,7 @@ export class Post {
           // Underwater: the whole picture breathes a little.
           vec2 uv = vUv + vec2(sin(vUv.y * 17.0 + uTime * 1.3), cos(vUv.x * 13.0 + uTime * 1.1)) * 0.0011;
           vec2 px = uWidth / uRes;
-          vec3 col = texture2D(tColor, uv).rgb;
+          vec3 col = samp(uv);
           float dC = linz(texture2D(tDepth, uv).r);
           float iC = 1.0 / dC;
           vec4 nC = texture2D(tNormal, uv);
@@ -105,7 +108,7 @@ export class Post {
           e *= clamp(mask, 0.0, 1.0) * (1.0 - smoothstep(25.0, 110.0, dC) * 0.85);
           vec3 inkCol = mix(col * 0.25, uInk, 0.55);
           col = mix(col, inkCol, clamp(e, 0.0, 1.0) * 0.9);
-          gl_FragColor = vec4(col, 1.0);
+          gl_FragColor = vec4(clamp(safe(col), 0.0, 32.0), 1.0);
         }`,
     });
     // ShaderPass clones uniforms and render-target textures don't clone: bind them afterwards.
@@ -129,6 +132,7 @@ export class Post {
         vec3 toSRGB(vec3 c){ c = max(c, 0.0); return mix(c * 12.92, 1.055 * pow(c, vec3(1.0 / 2.4)) - 0.055, step(0.0031308, c)); }
         void main(){
           vec3 c = texture2D(tDiffuse, vUv).rgb;
+          if (!(c.r >= 0.0 && c.r < 1e4 && c.g >= 0.0 && c.g < 1e4 && c.b >= 0.0 && c.b < 1e4)) c = vec3(0.0);
           float l = dot(c, vec3(0.2126, 0.7152, 0.0722));
           c = mix(vec3(l), c, uSat);
           // Split tone: deep blue-teal shadows, soft aqua-cream highlights.

@@ -452,6 +452,21 @@ export class Megafauna {
 
   get total(): number { return this.species.length; }
 
+  /** Push a point (the camera) out of every giant's body; pad is extra clearance in metres. */
+  pushOut(p: THREE.Vector3, pad: number): void {
+    for (const enc of this.active.values())
+      for (const cr of enc.creatures) {
+        if (!cr.ready) continue;
+        for (const s of [-0.35, -0.15, 0, 0.15, 0.3]) {
+          _a.copy(cr.pos).addScaledVector(cr.dir, s * cr.L);
+          const r = cr.sp.radius * cr.L * (Math.abs(s) > 0.2 ? 0.7 : 1) * Math.max(cr.gx, cr.gy) + pad;
+          _p.subVectors(p, _a);
+          const d = _p.length();
+          if (d < r && d > 1e-4) p.addScaledVector(_p, (r - d) / d);
+        }
+      }
+  }
+
   /**
    * Swap in the Blender-built models (scripts/blender/species.py) as they arrive. Until then, and if one
    * fails, the code-built shape stays in place. Same axes and unit length, so nothing else changes.

@@ -25,7 +25,7 @@ renderer.setClearColor(0x000000, 0);
 document.getElementById("app")!.appendChild(renderer.domElement);
 
 const scene = new THREE.Scene();
-const camera = new THREE.PerspectiveCamera(62, innerWidth / innerHeight, 0.1, 1500);
+const camera = new THREE.PerspectiveCamera(62, innerWidth / innerHeight, 0.05, 1500);
 
 const msaa = params.has("msaa") ? Number(params.get("msaa")) : matchMedia("(pointer: coarse)").matches ? 0 : 4;
 const post = new Post(renderer, innerWidth, innerHeight, { kuwahara: params.get("kuwahara") !== "0", msaa });
@@ -144,12 +144,14 @@ function frame(now: number) {
   if (toastT > 0 && (toastT -= dt) <= 0) hud.toast.classList.remove("on");
 
   // Chase camera: behind and a little above, lagging on turns; never through the floor or surface.
-  const s = Math.max(player.scale, 0.45);
-  camTarget.copy(player.pos).addScaledVector(player.fwd, -3.1 * s).add(look.set(0, 0.85 * s, 0));
+  // Third person at the fish's true size: a short chase distance keeps the fish readable on screen.
+  const s = player.scale;
+  camTarget.copy(player.pos).addScaledVector(player.fwd, -3.4 * s).add(look.set(0, 0.95 * s, 0));
   camera.position.lerp(camTarget, 1 - Math.exp(-dt * 3.2));
-  const fl = height(camera.position.x, camera.position.z) + 0.7;
+  const fl = height(camera.position.x, camera.position.z) + 0.25;
   if (camera.position.y < fl) camera.position.y = fl;
-  if (camera.position.y > -0.5) camera.position.y = -0.5;
+  if (camera.position.y > -0.3) camera.position.y = -0.3;
+  giants.pushOut(camera.position, 0.4);
   look.copy(player.pos).addScaledVector(player.fwd, 1.8 * s).add(camTarget.set(0, 0.25 * s, 0));
   lookS.lerp(look, 1 - Math.exp(-dt * 8));
   camera.lookAt(lookS);

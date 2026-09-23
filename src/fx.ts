@@ -102,7 +102,8 @@ export class Fx {
             vec3 dn = normalize(vec3(-uSunDir.x * 0.35, -1.0, -uSunDir.z * 0.35));
             vec3 ctr = top + dn * (-position.y * aOff.w);
             vec3 toCam = cameraPosition - ctr;
-            vec3 side = normalize(cross(dn, toCam));
+            vec3 sc = cross(dn, toCam);
+            vec3 side = dot(sc, sc) > 1e-8 ? normalize(sc) : vec3(1.0, 0.0, 0.0);
             vec3 w = ctr + side * position.x * aOff.z;
             float edge = 1.0 - smoothstep(0.65 * R, R, length(rel));
             float near = smoothstep(1.5, 9.0, length(toCam));
@@ -113,7 +114,7 @@ export class Fx {
           }`,
         fragmentShader: /* glsl */ `precision highp float; ${COMMON} ${FX_OUT} in float vA; in vec2 vUv;
           void main(){
-            float a = vA * sin(vUv.x * 3.14159) * pow(1.0 - vUv.y, 1.7) * smoothstep(0.0, 0.05, vUv.y);
+            float a = clamp(vA, 0.0, 1.0) * max(sin(vUv.x * 3.14159), 0.0) * pow(clamp(1.0 - vUv.y, 0.0, 1.0), 1.7) * smoothstep(0.0, 0.05, vUv.y);
             gColor = vec4(mix(uSurf, uSunCol, 0.5) * 0.11 * uRays, a);
             gNormal = vec4(0.0);
           }`,
@@ -151,7 +152,7 @@ export class Fx {
             vec3 w = cameraPosition + rel;
             vec4 mv = viewMatrix * vec4(w, 1.0);
             gl_Position = projectionMatrix * mv;
-            gl_PointSize = max(1.0, aS * uPx / -mv.z);
+            gl_PointSize = clamp(aS * uPx / max(-mv.z, 0.05), 1.0, 48.0);
             vA = (1.0 - smoothstep(14.0, 30.0, length(rel))) * step(w.y, -0.3) * smoothstep(0.5, 2.0, -mv.z);
           }`,
         fragmentShader: /* glsl */ `precision highp float; ${COMMON} ${FX_OUT} in float vA;

@@ -131,10 +131,12 @@ float net(vec2 p, float t){
        + 0.6 * (1.0 - smoothstep(0.0, 0.09 + wb, abs(b))) * (1.0 - smoothstep(0.3, 0.8, wb));
 }
 void main(){
-  vec3 N = normalize(vN);
+  // Guards: a zero normal or a zero distance must never produce NaN (it would spread through bloom).
+  float nl = length(vN);
+  vec3 N = nl > 1e-6 ? vN / nl : vec3(0.0, 1.0, 0.0);
   if (!gl_FrontFacing) N = -N;
   vec3 toCam = cameraPosition - vWorld;
-  float dist = length(toCam);
+  float dist = max(length(toCam), 1e-4);
   vec3 V = toCam / dist;
   float ndl = dot(N, uSunDir);
   // Three cel bands, each a narrow smoothstep so the terminator is drawn, not aliased.
@@ -160,6 +162,8 @@ void main(){
   c = mix(c, base * (1.1 + 1.6 * uGlow), uEmissive);
   float f = fogF(dist) * (1.0 - uEmissive * 0.4);
   c = mix(c, wc, f);
+  // Any NaN/Inf left (driver differences) becomes the water colour: comparisons with NaN are false.
+  if (!(c.r >= 0.0 && c.r < 1e4 && c.g >= 0.0 && c.g < 1e4 && c.b >= 0.0 && c.b < 1e4)) c = max(wc, vec3(0.0));
   gColor = vec4(c, 1.0);
   vec3 vn = normalize((viewMatrix * vec4(N, 0.0)).xyz);
   gNormal = vec4(vn.xy * 0.5 + 0.5, uId / 32.0, uMask < 0.0 ? -1.0 : uMask * (1.0 - f));
