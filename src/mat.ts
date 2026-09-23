@@ -39,6 +39,13 @@ ${COMMON}
 uniform vec3 uColor;
 uniform float uSwayAmp, uSwimPhase, uSwimAmp, uSwimRate;
 out vec3 vWorld; out vec3 vN; out vec3 vCol;
+#ifdef PHASEATTR
+  // Giants: each instance's stroke phase is integrated on the CPU from its speed and length.
+  in float aPhase;
+  #define PH(rate) (aPhase)
+#else
+  #define PH(rate) (uTime * (rate) + seed)
+#endif
 void main(){
   vec3 p = position;
   vec3 col = uColor;
@@ -59,7 +66,7 @@ void main(){
   #endif
   #ifdef SWIM
     #ifdef USE_INSTANCING
-      float ph = uTime * uSwimRate + seed;
+      float ph = PH(uSwimRate);
     #else
       float ph = uSwimPhase;
     #endif
@@ -68,20 +75,20 @@ void main(){
   #endif
   #ifdef SWIMV
     // Whales: the body undulates up and down, flukes beat hardest.
-    float phv = uTime * uSwimRate + seed;
+    float phv = PH(uSwimRate);
     float tl = smoothstep(0.15, -0.62, p.z);
     p.y += sin(p.z * 3.5 - phv) * uSwimAmp * (0.12 + tl * tl * 1.8);
   #endif
   #ifdef FLAP
     // Manta: wings beat in a wave from the body out to the tips.
-    float phf = uTime * uSwimRate + seed;
+    float phf = PH(uSwimRate);
     float ax = abs(p.x);
     p.y += sin(phf - ax * 2.5) * uSwimAmp * ax * ax * 5.0;
     p.y += sin(phf * 0.5 - p.z * 6.0) * 0.02 * smoothstep(-0.15, -0.4, p.z);
   #endif
   #ifdef TENT
     // Squid: the mantle breathes, arms and tentacles trail and curl.
-    float pht = uTime * uSwimRate + seed;
+    float pht = PH(uSwimRate);
     // Arms start at z 0.22 (mantle and head are the front 0.28 of the length); tentacles trail to −0.5.
     float kt = max(0.0, 0.22 - p.z);
     p.x += sin(pht * 0.7 + p.z * 7.0 + p.y * 40.0) * kt * 0.12;
@@ -90,7 +97,7 @@ void main(){
   #endif
   #ifdef SCULL
     // Ocean sunfish: tall dorsal and anal fins beat together side to side; the body barely moves.
-    float phs = uTime * uSwimRate + seed;
+    float phs = PH(uSwimRate);
     p.x += sin(phs) * uSwimAmp * pow(max(abs(p.y) - 0.33, 0.0), 1.1) * 3.0;
   #endif
   #ifdef JELLY
@@ -189,6 +196,8 @@ export interface ToonOpts {
   flap?: boolean;
   tent?: boolean;
   scull?: boolean;
+  /** Stroke phase comes from a per-instance aPhase attribute (giants), not from time. */
+  phaseAttr?: boolean;
   side?: THREE.Side;
   /** < 1 thins the fog on this surface: huge animals read as silhouettes from further away. */
   fogMul?: number;
@@ -203,6 +212,7 @@ export function toon(o: ToonOpts = {}): THREE.ShaderMaterial & { uniforms: Recor
   if (o.flap) defines.FLAP = "";
   if (o.tent) defines.TENT = "";
   if (o.scull) defines.SCULL = "";
+  if (o.phaseAttr) defines.PHASEATTR = "";
   return new THREE.ShaderMaterial({
     glslVersion: THREE.GLSL3,
     defines,

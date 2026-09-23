@@ -351,6 +351,8 @@ interface Species {
   minDepth: number;
   song?: number;
   clicks?: boolean;
+  /** Body lengths travelled per stroke: beat rate = speed / (stride × length). 0 = time-driven (jellies). */
+  stride: number;
   /** Drifts upright (jellies) instead of pointing along its path; `hang` is trailing length below, in body lengths. */
   upright?: boolean;
   hang?: number;
@@ -365,6 +367,9 @@ interface Creature {
   gx: number; gy: number; tint: THREE.Color;
   /** Gallery mode: held in place at home instead of swimming a loop. */
   home?: THREE.Vector3;
+  /** Stroke phase (radians) and integrated loop angle, so speed surges with each stroke. */
+  phase?: number;
+  thA?: number;
 }
 interface Encounter { creatures: Creature[]; noticed: boolean; nextSong: number; viewT: number }
 
@@ -402,67 +407,68 @@ export class Megafauna {
       const m = new THREE.InstancedMesh(geo, mat, cap);
       m.frustumCulled = false;
       for (let i = 0; i < cap; i++) m.setColorAt(i, new THREE.Color(1, 1, 1));
+      geo.setAttribute("aPhase", new THREE.InstancedBufferAttribute(new Float32Array(cap), 1));
       m.count = 0;
       scene.add(m);
       return m;
     };
-    const opts = { vertexColors: true, mask: 1, rim: 1.1, side: THREE.DoubleSide, caustic: 0.7, fogMul: 0.5 } as const;
+    const opts = { vertexColors: true, mask: 1, rim: 1.1, side: THREE.DoubleSide, caustic: 0.7, fogMul: 0.5, phaseAttr: true } as const;
     this.species = [
-      { key: "humpback", name: "Humpback whale", blurb: "15 metres. Sings the longest songs in the sea.", len: [11.5, 17], geoScale: 1, speed: 2.6,
+      { key: "humpback", name: "Humpback whale", blurb: "15 metres. Sings the longest songs in the sea.", len: [11.5, 17], geoScale: 1, speed: 1.8, stride: 0.6,
         mesh: mk(whaleGeo("humpback"), toon({ ...opts, id: 20, swimv: true, swimAmp: 0.035, swimRate: 1.5 }), 8),
         band: [-7, -16], clear: 4, radius: 0.1, group: [1, 3], song: 1,
         vary: { girth: [0.88, 1.16], light: [0.72, 1.22], hue: 0.02, speed: [0.8, 1.25] },
         // Humpback: coastal banks and open water; feeds over shelves.
         minDepth: 22, weight: (b) => b.flats * 1 + b.kelp * 0.5 + b.trench * 0.5 + b.reef * 0.25 },
-      { key: "blue", name: "Blue whale", blurb: "26 metres. The largest animal that has ever lived.", len: [21, 30], geoScale: 1, speed: 3.2,
+      { key: "blue", name: "Blue whale", blurb: "26 metres. The largest animal that has ever lived.", len: [21, 30], geoScale: 1, speed: 2.2, stride: 0.6,
         mesh: mk(whaleGeo("blue"), toon({ ...opts, id: 21, swimv: true, swimAmp: 0.028, swimRate: 1.1 }), 4),
         band: [-12, -26], clear: 6, radius: 0.07, group: [1, 2], song: 0.55,
         vary: { girth: [0.9, 1.1], light: [0.85, 1.18], hue: 0.025, speed: [0.85, 1.2] },
         // Blue whale: deep open ocean.
         minDepth: 40, weight: (b) => b.trench * 1.2 + b.flats * 0.4 },
-      { key: "whaleshark", name: "Whale shark", blurb: "11 metres. A fish, not a whale. Eats plankton, like you.", len: [7.5, 13], geoScale: 1, speed: 1.8,
+      { key: "whaleshark", name: "Whale shark", blurb: "11 metres. A fish, not a whale. Eats plankton, like you.", len: [7.5, 13], geoScale: 1, speed: 1.1, stride: 0.6,
         mesh: mk(whaleSharkGeo(), toon({ ...opts, id: 22, swim: true, swimAmp: 0.05, swimRate: 2.2 }), 4),
         band: [-3, -8], clear: 3, radius: 0.1, group: [1, 2],
         vary: { girth: [0.88, 1.2], light: [0.8, 1.2], hue: 0.03, speed: [0.75, 1.3] },
         // Whale shark: warm sunlit water, feeding near the surface; visits reef edges.
         minDepth: 14, weight: (b, night) => (night ? 0.15 : 1) * (b.flats * 0.7 + b.reef * 0.6 + b.kelp * 0.3) },
-      { key: "manta", name: "Manta ray", blurb: "6 metres wide. Flies instead of swims.", len: [3.8, 7.5], geoScale: 1, speed: 2.2,
+      { key: "manta", name: "Manta ray", blurb: "6 metres wide. Flies instead of swims.", len: [3.8, 7.5], geoScale: 1, speed: 1.0, stride: 0.55,
         mesh: mk(mantaGeo(), toon({ ...opts, id: 23, flap: true, swimAmp: 0.16, swimRate: 1.7 }), 10),
         band: [3, 8], floorRel: true, clear: 2, radius: 0.12, group: [1, 5],
         vary: { girth: [0.85, 1.2], width: [0.88, 1.15], light: [0.7, 1.15], hue: 0.02, speed: [0.8, 1.3] },
         // Manta: reef cleaning stations and nearby sand.
         minDepth: 8, weight: (b) => b.reef * 1.4 + b.flats * 0.4 },
-      { key: "squid", name: "Giant squid", blurb: "13 metres. Almost never seen alive. Rises from the deep at night.", len: [8, 12.5], geoScale: 1, speed: 1.4,
+      { key: "squid", name: "Giant squid", blurb: "13 metres. Almost never seen alive. Rises from the deep at night.", len: [8, 12.5], geoScale: 1, speed: 0.5, stride: 0.12,
         mesh: mk(squidGeo(), toon({ ...opts, id: 24, tent: true, swimRate: 1.3 }), 2),
         band: [4, 12], floorRel: true, clear: 3, radius: 0.04, group: [1, 1],
         vary: { girth: [0.85, 1.18], light: [0.75, 1.2], hue: 0.04, speed: [0.8, 1.2] },
         // Giant squid: the deep only; rises nearer at night.
         minDepth: 70, weight: (b, night) => b.trench * (night ? 2.2 : 0.4) },
-      { key: "sperm", name: "Sperm whale", blurb: "16 metres. A third of it is head. Hunts squid in the dark, by sound.", len: [11, 18], geoScale: 1, speed: 2.2,
+      { key: "sperm", name: "Sperm whale", blurb: "16 metres. A third of it is head. Hunts squid in the dark, by sound.", len: [11, 18], geoScale: 1, speed: 1.6, stride: 0.6,
         mesh: mk(spermGeo(), toon({ ...opts, id: 25, swimv: true, swimAmp: 0.03, swimRate: 1.2 }), 4),
         band: [-18, -40], clear: 5, radius: 0.1, group: [1, 3], clicks: true,
         vary: { girth: [0.9, 1.12], light: [0.8, 1.25], hue: 0.02, speed: [0.8, 1.2] },
         // Sperm whale: deep water, over slopes and trenches, where squid live.
         minDepth: 55, weight: (b) => b.trench * 1.4 + b.flats * 0.15 },
-      { key: "orca", name: "Orca", blurb: "7 metres. The largest dolphin. Hunts in family pods.", len: [5.5, 8], geoScale: 1, speed: 4,
+      { key: "orca", name: "Orca", blurb: "7 metres. The largest dolphin. Hunts in family pods.", len: [5.5, 8], geoScale: 1, speed: 2.8, stride: 0.6,
         mesh: mk(orcaGeo(), toon({ ...opts, id: 26, swimv: true, swimAmp: 0.04, swimRate: 2.4 }), 12),
         band: [-3, -12], clear: 3, radius: 0.11, group: [3, 6], song: 2.6,
         vary: { girth: [0.92, 1.12], light: [0.95, 1.05], hue: 0.0, speed: [0.85, 1.2] },
         // Orca: everywhere, often along kelp coasts.
         minDepth: 12, weight: (b) => b.flats * 0.7 + b.kelp * 0.8 + b.reef * 0.3 + b.trench * 0.3 },
-      { key: "whiteshark", name: "Great white shark", blurb: "5 metres. Countershaded: dark from above, pale from below.", len: [4, 6], geoScale: 1, speed: 2.2,
+      { key: "whiteshark", name: "Great white shark", blurb: "5 metres. Countershaded: dark from above, pale from below.", len: [4, 6], geoScale: 1, speed: 1.3, stride: 0.6,
         mesh: mk(whiteSharkGeo(), toon({ ...opts, id: 27, swim: true, swimAmp: 0.06, swimRate: 3 }), 3),
         band: [-4, -16], clear: 2, radius: 0.08, group: [1, 1],
         vary: { girth: [0.9, 1.18], light: [0.85, 1.12], hue: 0.015, speed: [0.8, 1.3] },
         // Great white: temperate coasts, kelp forests and sand flats.
         minDepth: 10, weight: (b) => b.kelp * 0.9 + b.flats * 0.6 + b.reef * 0.2 },
-      { key: "mola", name: "Ocean sunfish", blurb: "Taller than it is long. The heaviest bony fish in the sea.", len: [1.8, 3.3], geoScale: 1, speed: 0.8,
+      { key: "mola", name: "Ocean sunfish", blurb: "Taller than it is long. The heaviest bony fish in the sea.", len: [1.8, 3.3], geoScale: 1, speed: 0.6, stride: 0.25,
         mesh: mk(molaGeo(), toon({ ...opts, id: 28, scull: true, swimAmp: 0.1, swimRate: 1.6 }), 3),
         band: [-2, -8], clear: 3, radius: 0.35, group: [1, 1],
         vary: { girth: [0.9, 1.1], light: [0.85, 1.15], hue: 0.02, speed: [0.8, 1.3] },
         // Ocean sunfish: open water, basks at the surface; visits kelp to be cleaned.
         minDepth: 12, weight: (b, night) => (night ? 0.2 : 1) * (b.flats * 0.6 + b.trench * 0.5 + b.kelp * 0.4) },
-      { key: "lionsmane", name: "Lion's mane jellyfish", blurb: "Bell up to 2 metres; tentacles longer than a blue whale.", len: [0.6, 2], geoScale: 1, speed: 0.3,
+      { key: "lionsmane", name: "Lion's mane jellyfish", blurb: "Bell up to 2 metres; tentacles longer than a blue whale.", len: [0.6, 2], geoScale: 1, speed: 0.1, stride: 0,
         mesh: mk(lionGeo(), toon({ ...opts, id: 29, jelly: true, swimAmp: 0.22, emissive: 0.12, rim: 1.2 }), 3),
         band: [-4, -10], clear: 1, radius: 0.3, group: [1, 1], upright: true, hang: 14,
         vary: { girth: [0.9, 1.1], light: [0.8, 1.2], hue: 0.04, speed: [0.7, 1.3] },
@@ -523,6 +529,7 @@ export class Megafauna {
         if (!found) return;
         const g = found.geometry;
         if (!g.getAttribute("normal")) g.computeVertexNormals();
+        g.setAttribute("aPhase", sp.mesh.geometry.getAttribute("aPhase"));
         sp.mesh.geometry.dispose();
         sp.mesh.geometry = g;
       }, undefined, () => { /* keep the code-built shape */ });
@@ -661,7 +668,10 @@ export class Megafauna {
           cr.pos.y += Math.sin(t * 0.5 + cr.wob) * 0.3;
           cr.ready = true;
         } else {
-          const th = cr.th0 + cr.w * t - Math.sign(cr.w) * cr.lag;
+          // Integrate the loop angle so each stroke gives a small forward surge.
+          if (!cr.ready || cr.thA === undefined) cr.thA = cr.th0 + cr.w * t;
+          cr.thA += dt * cr.w * (1 + 0.08 * Math.sin(cr.phase ?? 0));
+          const th = cr.thA - Math.sign(cr.w) * cr.lag;
           const rr = cr.R * (1 + 0.22 * Math.sin(th * 2 + cr.wob)) + cr.side;
           const x = cr.c.x + Math.cos(th) * rr, z = cr.c.y + Math.sin(th) * rr;
           const floor = height(x, z);
@@ -695,6 +705,10 @@ export class Megafauna {
           _m.setPosition(cr.pos);
           cr.sp.mesh.setMatrixAt(i, _m);
           cr.sp.mesh.setColorAt(i, cr.tint);
+          const speed = cr.home ? cr.sp.speed : Math.abs(cr.w) * cr.R;
+          const rate = cr.sp.stride > 0 ? (2 * Math.PI * speed) / (cr.sp.stride * cr.L) : 2;
+          cr.phase = (cr.phase ?? cr.wob * 3) + dt * rate;
+          (cr.sp.mesh.geometry.getAttribute("aPhase") as THREE.BufferAttribute).setX(i, cr.phase);
           counts.set(cr.sp, i + 1);
         }
 
@@ -744,6 +758,8 @@ export class Megafauna {
       s.mesh.count = counts.get(s) ?? 0;
       s.mesh.instanceMatrix.needsUpdate = true;
       if (s.mesh.instanceColor) s.mesh.instanceColor.needsUpdate = true;
+      const ap = s.mesh.geometry.getAttribute("aPhase") as THREE.BufferAttribute | undefined;
+      if (ap) ap.needsUpdate = true;
     }
   }
 }
