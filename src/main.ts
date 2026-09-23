@@ -229,14 +229,17 @@ function frame(now: number) {
   // Chase camera: behind and a little above, lagging on turns; never through the floor or surface.
   // Third person at the fish's true size: a short chase distance keeps the fish readable on screen.
   const s = player.scale;
-  camTarget.copy(player.pos).addScaledVector(player.fwd, -3.4 * s).add(look.set(0, 0.95 * s, 0));
+  // Three-quarter view: behind, a little above and to the side, so the fish shows its flank, not just its tail.
+  look.set(player.fwd.z, 0, -player.fwd.x).normalize();
+  camTarget.copy(player.pos).addScaledVector(player.fwd, -2.8 * s).addScaledVector(look, 0.9 * s);
+  camTarget.y += 1.1 * s;
   // Tight follow: at a 35 cm fish, a slow lerp leaves the camera metres behind and the fish a speck.
   camera.position.lerp(camTarget, 1 - Math.exp(-dt * 7));
   const fl = height(camera.position.x, camera.position.z) + 0.25;
   if (camera.position.y < fl) camera.position.y = fl;
   if (camera.position.y > -0.3) camera.position.y = -0.3;
   giants.pushOut(camera.position, 0.4);
-  look.copy(player.pos).addScaledVector(player.fwd, 1.8 * s).add(camTarget.set(0, 0.25 * s, 0));
+  look.copy(player.pos).addScaledVector(player.fwd, 0.9 * s);
   lookS.lerp(look, 1 - Math.exp(-dt * 8));
   camera.lookAt(lookS);
   fx.update(camera);
