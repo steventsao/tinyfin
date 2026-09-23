@@ -10,9 +10,12 @@ import { TimeOfDay } from "./tod";
 import { Audio } from "./audio";
 import { biomeName, height } from "./terrain";
 import { Megafauna } from "./megafauna";
+import { setWorldSeed, WORLD } from "./noise";
 
 const params = new URLSearchParams(location.search);
 const AUTO = params.has("autoplay");
+// A fresh ocean every visit unless ?seed= pins one.
+setWorldSeed(params.has("seed") ? Number(params.get("seed")) : 1 + Math.floor(Math.random() * 999999));
 
 const renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: "high-performance" });
 renderer.setPixelRatio(Math.min(devicePixelRatio, innerWidth * devicePixelRatio > 2600 ? 1.25 : 1.75));
@@ -60,6 +63,7 @@ giants.onSight = ({ sp, isNew }) => {
   if (isNew) audio.chime(4);
 };
 giants.onSong = (pitch, gain) => audio.song(pitch, gain);
+giants.onClicks = (gain) => audio.clicks(gain);
 const intro = document.getElementById("intro")!;
 // No start gate: the fish swims from the first frame. The title fades by itself or on first input.
 let introUp = !AUTO;
@@ -160,7 +164,7 @@ function frame(now: number) {
     hud.zone.textContent = biomeName(player.pos.x, player.pos.z);
     hud.dist.textContent = player.distance < 1000 ? `${player.distance.toFixed(0)} m swum` : `${(player.distance / 1000).toFixed(2)} km swum`;
     hud.food.textContent = `${motes.eaten}`;
-    hud.time.textContent = tod.name;
+    hud.time.textContent = `${tod.name} · seed ${WORLD.seed}`;
     hud.seen.textContent = `${giants.seen.size}/${giants.total}`;
   }
 

@@ -108,7 +108,7 @@ export class Jellies {
   private js: { p: THREE.Vector3; sc: number; ph: number }[] = [];
   constructor(scene: THREE.Scene, player: THREE.Vector3) {
     const n = 26;
-    this.mesh = new THREE.InstancedMesh(jellyGeo(), toon({ vertexColors: true, id: 8, mask: 0.6, jelly: true, emissive: 0.45, side: THREE.DoubleSide, caustic: 0.2, rim: 1.4 }), n);
+    this.mesh = new THREE.InstancedMesh(jellyGeo(), toon({ vertexColors: true, id: 8, mask: 0.6, jelly: true, swimAmp: 1, emissive: 0.45, side: THREE.DoubleSide, caustic: 0.2, rim: 1.4 }), n);
     this.mesh.frustumCulled = false;
     const cols = ["#ff9bd2", "#b69bff", "#8ff3ff", "#ffc3a0", "#e3a6ff"].map((c) => new THREE.Color(c));
     for (let i = 0; i < n; i++) {

@@ -150,7 +150,7 @@ export class Audio {
     vib.connect(vg).connect(o.frequency);
     const lp = ctx.createBiquadFilter();
     lp.type = "lowpass";
-    lp.frequency.value = 520;
+    lp.frequency.value = 520 * Math.max(1, pitch);
     lp.Q.value = 6;
     const g = ctx.createGain();
     g.gain.setValueAtTime(0.0001, t);
@@ -169,6 +169,32 @@ export class Audio {
     if (!this.ctx) return;
     this.whale(pitch, gain);
     setTimeout(() => this.ctx && this.whale(pitch * 1.25, gain * 0.7), 2600);
+  }
+
+  /** Sperm whale echolocation: a coda of sharp broadband clicks. */
+  clicks(gain: number): void {
+    const ctx = this.ctx;
+    if (!ctx) return;
+    const n = 4 + Math.floor(Math.random() * 6);
+    let t = ctx.currentTime + 0.05;
+    const buf = ctx.createBuffer(1, Math.floor(ctx.sampleRate * 0.006), ctx.sampleRate);
+    const d = buf.getChannelData(0);
+    for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / d.length, 3);
+    for (let i = 0; i < n; i++) {
+      const s = ctx.createBufferSource();
+      s.buffer = buf;
+      const bp = ctx.createBiquadFilter();
+      bp.type = "bandpass";
+      bp.frequency.value = 2500 + Math.random() * 1500;
+      bp.Q.value = 1.2;
+      const g = ctx.createGain();
+      g.gain.value = gain * 3;
+      s.connect(bp).connect(g);
+      g.connect(this.master);
+      g.connect(this.verb);
+      s.start(t);
+      t += 0.18 + Math.random() * 0.25;
+    }
   }
 
   update(dt: number, speed: number, depth: number): void {

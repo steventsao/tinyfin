@@ -3,7 +3,7 @@ import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
 import { toon } from "./mat";
 import { prep } from "./geo";
 import { biome, height, type Biome } from "./terrain";
-import { hash2, mulberry32, smoothstep, lerp } from "./noise";
+import { hash2, mulberry32, smoothstep, lerp, WORLD } from "./noise";
 
 type ColFn = (x: number, y: number, z: number) => THREE.Color;
 const C = (h: string) => new THREE.Color(h);
@@ -172,6 +172,159 @@ function squidGeo(): THREE.BufferGeometry {
   return merge(parts);
 }
 
+/** Sperm whale: square head ≈ ⅓ of length, narrow underslung jaw, wrinkled skin, hump and knuckles, no real dorsal fin. */
+function spermGeo(): THREE.BufferGeometry {
+  const skin = C("#3e3b3c");
+  const col: ColFn = (_x, y, z) => {
+    const c = skin.clone();
+    // Behind the head the skin is shrivelled into fine bands.
+    if (z < 0.15 && Math.sin(z * 260 + Math.sin(y * 40) * 2) > 0.3) c.multiplyScalar(0.82);
+    if (y < -0.06 && z > 0.1) c.lerp(C("#6c6668"), 0.4);
+    return c;
+  };
+  const r = (t: number) => {
+    const rise = Math.pow(smoothstep(0.0, 0.5, t), 0.75);
+    const blunt = 1 - smoothstep(0.965, 1.0, t) * 0.55;
+    return 0.1 * Math.max(0.05, rise) * blunt;
+  };
+  const parts = [body(r, 0.82, 1.0, col, -0.5, 0.5, 64, 26)];
+  // Lower jaw: a narrow rod under the front third, pale inside.
+  const jaw = new THREE.CylinderGeometry(0.012, 0.018, 0.32, 8, 4);
+  jaw.rotateX(Math.PI / 2);
+  jaw.translate(0, -0.088, 0.3);
+  parts.push(prep(jaw, "#d9d2cc"));
+  // Dorsal hump and the knuckles behind it.
+  parts.push(fin([[-0.12, 0.085], [-0.16, 0.115], [-0.2, 0.08]], skin, upright));
+  for (let i = 0; i < 4; i++) parts.push(fin([[-0.23 - i * 0.045, 0.065 - i * 0.008], [-0.245 - i * 0.045, 0.08 - i * 0.009], [-0.26 - i * 0.045, 0.06 - i * 0.008]], skin, upright));
+  const pf = fin([[0, 0.02], [0.07, -0.01], [0.075, -0.035], [0, -0.02]], "#343132", (g) => { flatXZ(g); g.rotateZ(-0.6); g.translate(0.07, -0.06, 0.16); });
+  parts.push(pf, mirrorX(pf));
+  const fl = fin([[0, -0.46], [0.09, -0.52], [0.16, -0.56], [0.12, -0.58], [0.04, -0.565], [0, -0.555]], "#353233", flatXZ);
+  parts.push(fl, mirrorX(fl));
+  parts.push(eye(0.078, -0.05, 0.17, 0.006), eye(-0.078, -0.05, 0.17, 0.006));
+  return merge(parts);
+}
+
+/** Orca: stout, black with white eye patch, belly and flank lobe, grey saddle; tall dorsal; big rounded paddles. */
+function orcaGeo(): THREE.BufferGeometry {
+  const black = C("#101318"), white = C("#f2f4f5"), grey = C("#7d8590");
+  const col: ColFn = (x, y, z) => {
+    // Eye patch: an oval above and behind the eye.
+    const ex = (z - 0.335) / 0.05, ey = (y - 0.03) / 0.016;
+    if (Math.abs(x) > 0.05 && ex * ex + ey * ey < 1) return white.clone();
+    // Belly: white from chin to vent, with a lobe sweeping up the flank behind the dorsal.
+    const lobe = z < -0.02 && z > -0.3 ? 0.05 * Math.sin(((z + 0.02) / -0.28) * Math.PI) : 0;
+    if (y < -0.035 + lobe && z > -0.3 && z < 0.47) return white.clone();
+    if (y > 0.075 && z < -0.02 && z > -0.14) return grey.clone();
+    return black.clone();
+  };
+  const parts = [body((t) => 0.11 * Math.pow(Math.sin(Math.PI * Math.pow(t, 0.58)), 0.7), 0.95, 1.0, col, -0.5, 0.5, 56, 28)];
+  parts.push(fin([[0.04, 0.09], [-0.02, 0.28], [-0.035, 0.29], [-0.08, 0.1]], black, upright));
+  const pf = fin([[0, 0.03], [0.07, 0.02], [0.13, -0.04], [0.12, -0.09], [0.05, -0.07], [0, -0.03]], black, (g) => { flatXZ(g); g.rotateZ(-0.5); g.translate(0.08, -0.07, 0.22); });
+  parts.push(pf, mirrorX(pf));
+  const fl = fin([[0, -0.44], [0.08, -0.5], [0.13, -0.55], [0.1, -0.57], [0.03, -0.54], [0, -0.535]], black, flatXZ);
+  parts.push(fl, mirrorX(fl));
+  parts.push(eye(0.085, 0.005, 0.32, 0.006), eye(-0.085, 0.005, 0.32, 0.006));
+  return merge(parts);
+}
+
+/** Great white: conical snout, torpedo body, sharp grey/white countershading, five gill slits, lunate tail. */
+function whiteSharkGeo(): THREE.BufferGeometry {
+  const top = C("#66717d"), belly = C("#f1f2f0");
+  const col: ColFn = (x, y, z) => {
+    const line = -0.015 + 0.012 * Math.sin(z * 34) + 0.006 * Math.sin(z * 91);
+    if (Math.abs(x) > 0.04 && z > 0.18 && z < 0.29 && Math.abs(((z - 0.18) / 0.022) % 1 - 0.5) < 0.12 && y < 0.05 && y > -0.05) return C("#2b3139");
+    return y < line ? belly.clone() : top.clone();
+  };
+  const r = (t: number) => 0.095 * Math.pow(Math.sin(Math.PI * Math.pow(t, 0.95)), 0.62) * (1 - smoothstep(0.88, 1.0, t) * 0.35);
+  const parts = [body(r, 0.9, 1.0, col, -0.5, 0.5, 56, 26)];
+  parts.push(fin([[0.08, 0.08], [0.0, 0.2], [-0.03, 0.19], [-0.06, 0.08]], top, upright));
+  parts.push(fin([[-0.3, 0.03], [-0.32, 0.06], [-0.34, 0.03]], top, upright));
+  parts.push(fin([[-0.42, 0.0], [-0.52, 0.16], [-0.56, 0.17], [-0.5, 0.02], [-0.5, -0.02], [-0.55, -0.14], [-0.52, -0.14], [-0.43, -0.01]], top, upright));
+  const pf = fin([[0, 0.03], [0.1, -0.04], [0.2, -0.12], [0.18, -0.13], [0.05, -0.07], [0, -0.03]], top, (g) => { flatXZ(g); g.rotateZ(-0.35); g.translate(0.07, -0.05, 0.2); });
+  parts.push(pf, mirrorX(pf));
+  parts.push(eye(0.06, 0.02, 0.4, 0.007), eye(-0.06, 0.02, 0.4, 0.007));
+  return merge(parts);
+}
+
+/** Ocean sunfish: tall laterally-flat disc, truncated behind into a scalloped clavus, towering dorsal and anal fins. */
+function molaGeo(): THREE.BufferGeometry {
+  const col: ColFn = (x, y, z) => {
+    const c = C("#9aa6ae").lerp(C("#e2e6e6"), smoothstep(0.1, -0.3, y));
+    if (hash2(Math.floor(x * 30 + z * 30), Math.floor(y * 30), 5) > 0.86) c.multiplyScalar(1.12);
+    return c;
+  };
+  const s = new THREE.SphereGeometry(1, 36, 26);
+  const p = s.getAttribute("position");
+  for (let i = 0; i < p.count; i++) {
+    let x = p.getX(i) * 0.12, y = p.getY(i) * 0.4, z = p.getZ(i) * 0.46;
+    // Truncated rear: the back of the ellipsoid is squashed flat.
+    if (z < -0.3) z = -0.3 + (z + 0.3) * 0.35;
+    if (z > 0.3) y *= 1 - (z - 0.3) * 1.4;
+    x *= 1 - Math.max(0, -z - 0.2) * 1.5;
+    p.setXYZ(i, x, y, z);
+  }
+  s.computeVertexNormals();
+  const parts = [prep(s, col)];
+  const finCol = "#6f7c86";
+  parts.push(fin([[-0.14, 0.3], [-0.26, 0.64], [-0.33, 0.62], [-0.32, 0.26]], finCol, upright));
+  parts.push(fin([[-0.14, -0.3], [-0.26, -0.64], [-0.33, -0.62], [-0.32, -0.26]], finCol, upright));
+  const clav: [number, number][] = [[-0.33, 0.3]];
+  for (let i = 0; i <= 10; i++) { const y = 0.3 - i * 0.06; clav.push([-0.43 - (i % 2 ? 0.035 : 0), y]); }
+  clav.push([-0.33, -0.3]);
+  parts.push(fin(clav, finCol, upright));
+  const pf = fin([[0, 0.03], [0.05, 0.0], [0, -0.03]], finCol, (g) => { g.rotateY(Math.PI / 2); g.translate(0.07, 0.02, 0.12); });
+  parts.push(pf, mirrorX(pf));
+  parts.push(eye(0.065, 0.08, 0.3, 0.018, "#1a1d20"));
+  parts.push(eye(-0.065, 0.08, 0.3, 0.018, "#1a1d20"));
+  const mouth = new THREE.SphereGeometry(0.018, 8, 6);
+  mouth.translate(0, 0.02, 0.455);
+  parts.push(prep(mouth, "#3a3f44"));
+  return merge(parts);
+}
+
+/** Lion's mane: lobed crimson bell (diameter 1), frilly oral arms, 8 clusters of tentacles ~15 bells long. */
+function lionGeo(): THREE.BufferGeometry {
+  const prof: THREE.Vector2[] = [];
+  for (let i = 0; i <= 16; i++) {
+    const t = i / 16, a = t * Math.PI * 0.5;
+    prof.push(new THREE.Vector2(Math.max(1e-4, Math.cos(a) * 0.5), Math.sin(a) * 0.3 + 0.02));
+  }
+  const bell = new THREE.LatheGeometry(prof, 48);
+  const p = bell.getAttribute("position");
+  for (let i = 0; i < p.count; i++) {
+    const x = p.getX(i), z = p.getZ(i), y = p.getY(i);
+    const a = Math.atan2(z, x), edge = 1 - y / 0.32;
+    const k = 1 + 0.07 * edge * Math.cos(a * 8);
+    p.setXYZ(i, x * k, y, z * k);
+  }
+  bell.computeVertexNormals();
+  const parts = [prep(bell, (_x, y) => C("#b8452a").lerp(C("#e8a24a"), smoothstep(0.3, 0.05, y) * 0.7))];
+  const r = mulberry32(55);
+  for (let c = 0; c < 8; c++) {
+    const a0 = ((c + 0.5) / 8) * Math.PI * 2;
+    for (let k = 0; k < 12; k++) {
+      const a = a0 + (r() - 0.5) * 0.35, rr = 0.36 + r() * 0.1, len = 10 + r() * 6;
+      const t = new THREE.PlaneGeometry(0.012, len, 1, 24);
+      t.translate(0, -len / 2, 0);
+      t.rotateY(r() * Math.PI);
+      t.translate(Math.cos(a) * rr, 0.03, Math.sin(a) * rr);
+      parts.push(prep(t, (_x, y) => C("#f0c070").lerp(C("#c9643a"), smoothstep(0, -10, y) * 0.5)));
+    }
+  }
+  for (let i = 0; i < 6; i++) {
+    const a = (i / 6) * Math.PI * 2, len = 1.6 + r() * 1.2;
+    const t = new THREE.PlaneGeometry(0.16, len, 3, 14);
+    const q = t.getAttribute("position");
+    for (let j = 0; j < q.count; j++) q.setZ(j, Math.sin(q.getY(j) * 9 + q.getX(j) * 30) * 0.03);
+    t.translate(0, -len / 2, 0);
+    t.rotateY(a);
+    t.translate(Math.cos(a) * 0.08, 0.05, Math.sin(a) * 0.08);
+    t.computeVertexNormals();
+    parts.push(prep(t, "#e98a55"));
+  }
+  return merge(parts);
+}
+
 // ---------- Species table: where each can appear, and how ----------
 
 interface Species {
@@ -190,12 +343,19 @@ interface Species {
   group: [number, number];
   weight: (b: Biome, night: boolean) => number;
   song?: number;
+  clicks?: boolean;
+  /** Drifts upright (jellies) instead of pointing along its path; `hang` is trailing length below, in body lengths. */
+  upright?: boolean;
+  hang?: number;
+  /** Per-individual ranges: girth (x, y scale), width (x only), colour lightness, hue shift, speed. */
+  vary: { girth: [number, number]; width?: [number, number]; light: [number, number]; hue: number; speed: [number, number] };
 }
 
 interface Creature {
   sp: Species; L: number; c: THREE.Vector2; R: number; w: number; th0: number; wob: number;
   lag: number; side: number; dy: number; y: number; baseT: number;
   pos: THREE.Vector3; dir: THREE.Vector3; ready: boolean;
+  gx: number; gy: number; tint: THREE.Color;
 }
 interface Encounter { creatures: Creature[]; noticed: boolean; nextSong: number }
 
@@ -216,6 +376,7 @@ export class Megafauna {
   readonly seen = new Set<string>();
   onSight: (s: Sighting) => void = () => {};
   onSong: (pitch: number, gain: number) => void = () => {};
+  onClicks: (gain: number) => void = () => {};
   private forced: string | null;
   private forcedDone = false;
 
@@ -225,39 +386,70 @@ export class Megafauna {
     const mk = (geo: THREE.BufferGeometry, mat: THREE.Material, cap: number) => {
       const m = new THREE.InstancedMesh(geo, mat, cap);
       m.frustumCulled = false;
+      for (let i = 0; i < cap; i++) m.setColorAt(i, new THREE.Color(1, 1, 1));
       m.count = 0;
       scene.add(m);
       return m;
     };
     const opts = { vertexColors: true, mask: 1, rim: 0.9, side: THREE.DoubleSide, caustic: 0.7 } as const;
     this.species = [
-      { key: "humpback", name: "Humpback whale", blurb: "15 metres. Sings the longest songs in the sea.", len: [13, 16], geoScale: 1, speed: 2.6,
+      { key: "humpback", name: "Humpback whale", blurb: "15 metres. Sings the longest songs in the sea.", len: [11.5, 17], geoScale: 1, speed: 2.6,
         mesh: mk(whaleGeo("humpback"), toon({ ...opts, id: 20, swimv: true, swimAmp: 0.035, swimRate: 1.5 }), 8),
         band: [-7, -16], clear: 4, radius: 0.1, group: [1, 3], song: 1,
+        vary: { girth: [0.88, 1.16], light: [0.72, 1.22], hue: 0.02, speed: [0.8, 1.25] },
         weight: (b) => b.flats * 1 + b.kelp * 0.6 + b.trench * 0.6 + b.reef * 0.2 },
-      { key: "blue", name: "Blue whale", blurb: "26 metres. The largest animal that has ever lived.", len: [23, 28], geoScale: 1, speed: 3.2,
+      { key: "blue", name: "Blue whale", blurb: "26 metres. The largest animal that has ever lived.", len: [21, 30], geoScale: 1, speed: 3.2,
         mesh: mk(whaleGeo("blue"), toon({ ...opts, id: 21, swimv: true, swimAmp: 0.028, swimRate: 1.1 }), 4),
-        band: [-12, -26], clear: 6, radius: 0.07, group: [1, 1], song: 0.55,
+        band: [-12, -26], clear: 6, radius: 0.07, group: [1, 2], song: 0.55,
+        vary: { girth: [0.9, 1.1], light: [0.85, 1.18], hue: 0.025, speed: [0.85, 1.2] },
         weight: (b) => b.trench * 1.1 + b.flats * 0.35 },
-      { key: "whaleshark", name: "Whale shark", blurb: "11 metres. A fish, not a whale. Eats plankton, like you.", len: [9, 12], geoScale: 1, speed: 1.8,
+      { key: "whaleshark", name: "Whale shark", blurb: "11 metres. A fish, not a whale. Eats plankton, like you.", len: [7.5, 13], geoScale: 1, speed: 1.8,
         mesh: mk(whaleSharkGeo(), toon({ ...opts, id: 22, swim: true, swimAmp: 0.05, swimRate: 2.2 }), 4),
         band: [-3, -8], clear: 3, radius: 0.1, group: [1, 2],
+        vary: { girth: [0.88, 1.2], light: [0.8, 1.2], hue: 0.03, speed: [0.75, 1.3] },
         weight: (b, night) => (night ? 0.1 : 1) * (b.flats * 0.8 + b.kelp * 0.5 + b.reef * 0.5) },
-      { key: "manta", name: "Manta ray", blurb: "6 metres wide. Flies instead of swims.", len: [4.5, 7], geoScale: 1, speed: 2.2,
+      { key: "manta", name: "Manta ray", blurb: "6 metres wide. Flies instead of swims.", len: [3.8, 7.5], geoScale: 1, speed: 2.2,
         mesh: mk(mantaGeo(), toon({ ...opts, id: 23, flap: true, swimAmp: 0.16, swimRate: 1.7 }), 10),
-        band: [3, 8], floorRel: true, clear: 2, radius: 0.12, group: [1, 4],
+        band: [3, 8], floorRel: true, clear: 2, radius: 0.12, group: [1, 5],
+        vary: { girth: [0.85, 1.2], width: [0.88, 1.15], light: [0.7, 1.15], hue: 0.02, speed: [0.8, 1.3] },
         weight: (b) => b.reef * 1.4 + b.flats * 0.35 },
-      { key: "squid", name: "Giant squid", blurb: "13 metres. Almost never seen alive. Rises from the deep at night.", len: [8, 9.5], geoScale: 1, speed: 1.4,
+      { key: "squid", name: "Giant squid", blurb: "13 metres. Almost never seen alive. Rises from the deep at night.", len: [6.5, 10], geoScale: 1, speed: 1.4,
         mesh: mk(squidGeo(), toon({ ...opts, id: 24, tent: true, swimRate: 1.3 }), 2),
         band: [4, 12], floorRel: true, clear: 3, radius: 0.07, group: [1, 1],
+        vary: { girth: [0.85, 1.18], light: [0.75, 1.2], hue: 0.04, speed: [0.8, 1.2] },
         weight: (b, night) => b.trench * (night ? 2.2 : 0.25) },
+      { key: "sperm", name: "Sperm whale", blurb: "16 metres. A third of it is head. Hunts squid in the dark, by sound.", len: [11, 18], geoScale: 1, speed: 2.2,
+        mesh: mk(spermGeo(), toon({ ...opts, id: 25, swimv: true, swimAmp: 0.03, swimRate: 1.2 }), 4),
+        band: [-18, -40], clear: 5, radius: 0.1, group: [1, 3], clicks: true,
+        vary: { girth: [0.9, 1.12], light: [0.8, 1.25], hue: 0.02, speed: [0.8, 1.2] },
+        weight: (b) => b.trench * 1.3 + b.flats * 0.2 },
+      { key: "orca", name: "Orca", blurb: "7 metres. The largest dolphin. Hunts in family pods.", len: [5.5, 8], geoScale: 1, speed: 4,
+        mesh: mk(orcaGeo(), toon({ ...opts, id: 26, swimv: true, swimAmp: 0.04, swimRate: 2.4 }), 12),
+        band: [-3, -12], clear: 3, radius: 0.11, group: [3, 6], song: 2.6,
+        vary: { girth: [0.92, 1.12], light: [0.95, 1.05], hue: 0.0, speed: [0.85, 1.2] },
+        weight: (b) => b.flats * 0.7 + b.kelp * 0.6 + b.reef * 0.3 + b.trench * 0.3 },
+      { key: "whiteshark", name: "Great white shark", blurb: "5 metres. Countershaded: dark from above, pale from below.", len: [4, 6], geoScale: 1, speed: 2.2,
+        mesh: mk(whiteSharkGeo(), toon({ ...opts, id: 27, swim: true, swimAmp: 0.06, swimRate: 3 }), 3),
+        band: [-4, -16], clear: 2, radius: 0.1, group: [1, 1],
+        vary: { girth: [0.9, 1.18], light: [0.85, 1.12], hue: 0.015, speed: [0.8, 1.3] },
+        weight: (b) => b.flats * 0.6 + b.kelp * 0.6 + b.reef * 0.3 },
+      { key: "mola", name: "Ocean sunfish", blurb: "Taller than it is long. The heaviest bony fish in the sea.", len: [1.8, 3.3], geoScale: 1, speed: 0.8,
+        mesh: mk(molaGeo(), toon({ ...opts, id: 28, scull: true, swimAmp: 0.1, swimRate: 1.6 }), 3),
+        band: [-2, -8], clear: 3, radius: 0.35, group: [1, 1],
+        vary: { girth: [0.9, 1.1], light: [0.85, 1.15], hue: 0.02, speed: [0.8, 1.3] },
+        weight: (b, night) => (night ? 0.2 : 1) * (b.flats * 0.7 + b.kelp * 0.4) },
+      { key: "lionsmane", name: "Lion's mane jellyfish", blurb: "Bell up to 2 metres; tentacles longer than a blue whale.", len: [0.6, 2], geoScale: 1, speed: 0.3,
+        mesh: mk(lionGeo(), toon({ ...opts, id: 29, jelly: true, swimAmp: 0.22, emissive: 0.12, rim: 1.2 }), 3),
+        band: [-4, -10], clear: 1, radius: 0.3, group: [1, 1], upright: true, hang: 14,
+        vary: { girth: [0.9, 1.1], light: [0.8, 1.2], hue: 0.04, speed: [0.7, 1.3] },
+        weight: (b, night) => (b.flats * 0.4 + b.trench * 0.5 + b.kelp * 0.3) * (night ? 1.4 : 0.8) },
     ];
   }
 
   get total(): number { return this.species.length; }
 
   private spawn(cx: number, cz: number, night: boolean, near?: THREE.Vector3): Encounter {
-    const rnd = mulberry32(Math.floor(hash2(cx, cz, 777) * 4294967295));
+    const rnd = mulberry32(Math.floor(hash2(cx, cz, 777 + WORLD.seed) * 4294967295));
     const enc: Encounter = { creatures: [], noticed: false, nextSong: 0 };
     let sp: Species | undefined;
     if (near && this.forced) sp = this.species.find((s) => s.key === this.forced);
@@ -282,8 +474,15 @@ export class Megafauna {
       // Humpback groups: a mother and calf swim close; others spread in a loose line.
       const calf = sp.key === "humpback" && i > 0;
       const L = calf ? L0 * 0.35 : L0 * (i === 0 ? 1 : 0.85 + rnd() * 0.2);
+      // Every individual draws its own proportions, colour and pace from the species' ranges.
+      const v = sp.vary;
+      const girth = lerp(v.girth[0], v.girth[1], rnd());
+      const width = v.width ? lerp(v.width[0], v.width[1], rnd()) : 1;
+      const tint = new THREE.Color(1, 1, 1).offsetHSL((rnd() - 0.5) * 2 * v.hue, 0, 0).multiplyScalar(lerp(v.light[0], v.light[1], rnd()));
+      const speed = sp.speed * (i === 0 ? lerp(v.speed[0], v.speed[1], rnd()) : 1);
       enc.creatures.push({
-        sp, L, c, R, w: (dirSign * sp.speed) / R, th0, wob,
+        sp, L, c, R, w: (dirSign * (i === 0 ? speed : enc.creatures[0].w * R * dirSign)) / R, th0, wob,
+        gx: girth * width, gy: calf ? girth * 1.05 : girth, tint,
         lag: i === 0 ? 0 : (calf ? 0.3 : 0.9 + i * 0.7) * L0 / R,
         side: i === 0 ? 0 : calf ? L0 * 0.3 : (rnd() - 0.5) * L0 * 1.4,
         dy: i === 0 ? 0 : calf ? L0 * 0.12 : (rnd() - 0.5) * L0 * 0.4,
@@ -318,7 +517,7 @@ export class Megafauna {
         const floor = height(x, z);
         const bandY = lerp(cr.sp.band[0], cr.sp.band[1], cr.baseT);
         let ty = (cr.sp.floorRel ? floor + bandY : bandY) + cr.dy + Math.sin(t * 0.07 + cr.wob) * 2;
-        ty = Math.max(ty, floor + cr.sp.clear + cr.L * 0.1);
+        ty = Math.max(ty, floor + cr.sp.clear + cr.L * (cr.sp.hang ?? 0.1));
         ty = Math.min(ty, -1.5 - cr.L * 0.08);
         if (!cr.ready) cr.y = ty;
         cr.y += (ty - cr.y) * (1 - Math.exp(-dt * 0.6));
@@ -335,12 +534,16 @@ export class Megafauna {
 
         const i = counts.get(cr.sp) ?? 0;
         if (i < cr.sp.mesh.instanceMatrix.count) {
-          _a.copy(cr.dir);
-          _a.y = THREE.MathUtils.clamp(_a.y, -0.5, 0.5);
-          _m.lookAt(ZERO, _a.normalize().negate(), UP);
-          _m.scale(_s.setScalar(cr.L * cr.sp.geoScale));
+          if (cr.sp.upright) _m.makeRotationY(Math.atan2(cr.dir.x, cr.dir.z) * 0.2 + cr.wob);
+          else {
+            _a.copy(cr.dir);
+            _a.y = THREE.MathUtils.clamp(_a.y, -0.5, 0.5);
+            _m.lookAt(ZERO, _a.normalize().negate(), UP);
+          }
+          _m.scale(_s.set(cr.L * cr.gx, cr.L * cr.gy, cr.L).multiplyScalar(cr.sp.geoScale));
           _m.setPosition(cr.pos);
           cr.sp.mesh.setMatrixAt(i, _m);
+          cr.sp.mesh.setColorAt(i, cr.tint);
           counts.set(cr.sp, i + 1);
         }
 
@@ -363,6 +566,10 @@ export class Megafauna {
         try { localStorage.setItem("drift.seen", JSON.stringify([...this.seen])); } catch { /* storage unavailable */ }
         this.onSight({ sp, isNew });
       }
+      if (sp.clicks && nearest < 160) {
+        enc.nextSong -= dt;
+        if (enc.nextSong <= 0) { this.onClicks(0.04 + 0.1 * (1 - Math.min(1, nearest / 160))); enc.nextSong = 5 + Math.random() * 8; }
+      }
       if (sp.song && nearest < 140) {
         enc.nextSong -= dt;
         if (enc.nextSong <= 0) {
@@ -374,6 +581,7 @@ export class Megafauna {
     for (const s of this.species) {
       s.mesh.count = counts.get(s) ?? 0;
       s.mesh.instanceMatrix.needsUpdate = true;
+      if (s.mesh.instanceColor) s.mesh.instanceColor.needsUpdate = true;
     }
   }
 }

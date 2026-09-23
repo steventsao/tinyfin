@@ -2,7 +2,7 @@ import * as THREE from "three";
 import { toon } from "./mat";
 import { biome, height } from "./terrain";
 import { coralGeos, grassGeo, kelpGeo, rockGeo } from "./geo";
-import { mulberry32, smoothstep, vnoise } from "./noise";
+import { mulberry32, smoothstep, vnoise, WORLD } from "./noise";
 
 export const CHUNK = 56;
 const SEG = 28;
@@ -83,7 +83,7 @@ export class World {
     g.deleteAttribute("uv");
     group.add(new THREE.Mesh(g, this.terrainMat));
 
-    const rnd = mulberry32((ix * 73856093) ^ (iz * 19349663));
+    const rnd = mulberry32((ix * 73856093) ^ (iz * 19349663) ^ Math.imul(WORLD.seed, 83492791));
     const m = new THREE.Matrix4(), q = new THREE.Quaternion(), s = new THREE.Vector3(), v = new THREE.Vector3();
     const up = new THREE.Vector3(0, 1, 0);
     const place = (tries: number, accept: (x: number, z: number) => number, set: (x: number, y: number, z: number, list: { m: THREE.Matrix4; c: THREE.Color }[]) => void) => {

@@ -1,4 +1,12 @@
 /** Deterministic hashing + value noise. Every placement in the ocean is a function of position. */
+/** The world seed: offsets every procedural field, so each session's ocean differs. */
+export const WORLD = { seed: 0, ox: 0, oz: 0 };
+export function setWorldSeed(seed: number): void {
+  WORLD.seed = seed >>> 0;
+  WORLD.ox = (hash2(seed, 1, 91) - 0.5) * 2e5;
+  WORLD.oz = (hash2(seed, 2, 92) - 0.5) * 2e5;
+}
+
 export function hash2(x: number, y: number, s = 0): number {
   let h = (Math.imul(x | 0, 0x27d4eb2d) ^ Math.imul(y | 0, 0x165667b1) ^ Math.imul(s | 0, 0x9e3779b1)) >>> 0;
   h = Math.imul(h ^ (h >>> 15), 0x85ebca6b) >>> 0;

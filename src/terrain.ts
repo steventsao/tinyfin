@@ -1,9 +1,10 @@
-import { fbm, vnoise, smoothstep } from "./noise";
+import { fbm, vnoise, smoothstep, WORLD } from "./noise";
 
 export interface Biome { reef: number; kelp: number; trench: number; flats: number }
 
 /** Low-frequency biome field: reefs are shallow, trenches plunge, kelp grows in between. */
 export function biome(x: number, z: number): Biome {
+  x += WORLD.ox; z += WORLD.oz;
   const b = fbm(x / 420, z / 420, 3, 11);
   const reef = smoothstep(0.47, 0.35, b);
   const trench = smoothstep(0.6, 0.72, b);
@@ -21,6 +22,7 @@ export function biomeName(x: number, z: number): string {
 /** Seafloor height (m, surface at 0). */
 export function height(x: number, z: number): number {
   const bi = biome(x, z);
+  x += WORLD.ox; z += WORLD.oz;
   let h = -30 + (fbm(x / 110, z / 110, 5, 3) - 0.5) * 26;
   const r = vnoise(x / 35, z / 35, 5);
   h += (1 - Math.abs(r * 2 - 1)) * 5;

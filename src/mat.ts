@@ -84,10 +84,15 @@ void main(){
     p.y += cos(pht * 0.6 + p.z * 6.0 + p.x * 40.0) * kt * 0.18;
     if (p.z > -0.12) p.xy *= 1.0 + 0.05 * sin(pht * 0.8);
   #endif
+  #ifdef SCULL
+    // Ocean sunfish: tall dorsal and anal fins beat together side to side; the body barely moves.
+    float phs = uTime * uSwimRate + seed;
+    p.x += sin(phs) * uSwimAmp * pow(max(abs(p.y) - 0.25, 0.0), 1.2) * 3.0;
+  #endif
   #ifdef JELLY
     float pulse = sin(uTime * 2.2 + seed);
     if (p.y > 0.0) { p.xz *= 1.0 - 0.16 * pulse * (1.05 - p.y); p.y *= 1.0 + 0.08 * pulse; }
-    else { p.x += sin(uTime * 1.3 + p.y * 1.6 + seed) * 0.22 * (-p.y); p.z += cos(uTime * 1.1 + p.y * 1.3 + seed) * 0.18 * (-p.y); }
+    else { p.x += sin(uTime * 1.3 + p.y * 1.6 + seed) * 0.22 * uSwimAmp * (-p.y); p.z += cos(uTime * 1.1 + p.y * 1.3 + seed) * 0.18 * uSwimAmp * (-p.y); }
   #endif
   vec4 w = m * vec4(p, 1.0);
   #ifdef SWAY
@@ -169,6 +174,7 @@ export interface ToonOpts {
   swimv?: boolean;
   flap?: boolean;
   tent?: boolean;
+  scull?: boolean;
   side?: THREE.Side;
 }
 
@@ -180,6 +186,7 @@ export function toon(o: ToonOpts = {}): THREE.ShaderMaterial & { uniforms: Recor
   if (o.swimv) defines.SWIMV = "";
   if (o.flap) defines.FLAP = "";
   if (o.tent) defines.TENT = "";
+  if (o.scull) defines.SCULL = "";
   return new THREE.ShaderMaterial({
     glslVersion: THREE.GLSL3,
     defines,
