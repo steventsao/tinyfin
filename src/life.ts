@@ -65,6 +65,13 @@ export class Schools {
     scene.add(this.mesh);
   }
 
+  /** Distance from p to the nearest shoal member. */
+  nearest(p: THREE.Vector3): number {
+    let d = Infinity;
+    for (const s of this.list) for (const f of s.members) d = Math.min(d, f.p.distanceTo(p));
+    return d;
+  }
+
   update(dt: number, t: number, player: THREE.Vector3, fwd: THREE.Vector3, playerSpeed: number): void {
     for (const s of this.list) {
       // Wander: a slowly turning heading from noise, plus depth keeping.
@@ -118,6 +125,10 @@ export class Jellies {
     }
     scene.add(this.mesh);
   }
+  nearest(p: THREE.Vector3): number {
+    return this.js.reduce((d, j) => Math.min(d, j.p.distanceTo(p)), Infinity);
+  }
+
   update(dt: number, t: number, player: THREE.Vector3, fwd: THREE.Vector3): void {
     this.js.forEach((j, i) => {
       const pulse = Math.max(0, Math.sin(t * 2.2 + i * 1.618));
@@ -164,6 +175,10 @@ export class Motes {
       m.p.copy(m.base);
     }
   }
+  nearest(p: THREE.Vector3): number {
+    return this.ms.reduce((d, m) => (m.base.y > 50 ? d : Math.min(d, m.p.distanceTo(p))), Infinity);
+  }
+
   /** Returns how many were eaten this frame. */
   update(t: number, mouth: THREE.Vector3, reach: number, player: THREE.Vector3, fwd: THREE.Vector3): number {
     let ate = 0;

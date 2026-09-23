@@ -452,6 +452,14 @@ export class Megafauna {
 
   get total(): number { return this.species.length; }
 
+  /** Record a sighting (giant or common type); returns true the first time. Persists across visits. */
+  note(key: string): boolean {
+    if (this.seen.has(key)) return false;
+    this.seen.add(key);
+    try { localStorage.setItem("drift.seen", JSON.stringify([...this.seen])); } catch { /* storage unavailable */ }
+    return true;
+  }
+
   /** Push a point (the camera) out of every giant's body; pad is extra clearance in metres. */
   pushOut(p: THREE.Vector3, pad: number): void {
     for (const enc of this.active.values())
@@ -602,10 +610,7 @@ export class Megafauna {
       const sp = enc.creatures[0].sp;
       if (!enc.noticed && nearest < 38) {
         enc.noticed = true;
-        const isNew = !this.seen.has(sp.key);
-        this.seen.add(sp.key);
-        try { localStorage.setItem("drift.seen", JSON.stringify([...this.seen])); } catch { /* storage unavailable */ }
-        this.onSight({ sp, isNew });
+        this.onSight({ sp, isNew: this.note(sp.key) });
       }
       if (sp.clicks && nearest < 160) {
         enc.nextSong -= dt;

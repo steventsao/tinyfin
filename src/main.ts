@@ -8,7 +8,7 @@ import { Input } from "./input";
 import { Schools, Jellies, Motes, Bubbles } from "./life";
 import { TimeOfDay } from "./tod";
 import { Audio } from "./audio";
-import { biomeName, height } from "./terrain";
+import { biome, biomeName, height } from "./terrain";
 import { Megafauna } from "./megafauna";
 import { setWorldSeed, WORLD } from "./noise";
 
@@ -55,13 +55,32 @@ const hud = {
   seen: document.getElementById("seen")!,
   toast: document.getElementById("toast")!,
 };
+// Sighting titles queue, so several early sightings don't overwrite each other.
 let toastT = 0;
-giants.onSight = ({ sp, isNew }) => {
-  hud.toast.innerHTML = `<div class="k">${isNew ? "New sighting" : "Sighting"}</div><div class="n">${sp.name}</div><div class="b">${sp.blurb}</div>`;
+const toasts: { name: string; blurb: string; isNew: boolean }[] = [];
+function showToast() {
+  const n = toasts.shift();
+  if (!n) return;
+  hud.toast.innerHTML = `<div class="k">${n.isNew ? "New sighting" : "Sighting"}</div><div class="n">${n.name}</div><div class="b">${n.blurb}</div>`;
   hud.toast.classList.add("on");
-  toastT = 7;
-  if (isNew) audio.chime(4);
-};
+  toastT = toasts.length ? 3.8 : 6;
+  if (n.isNew) audio.chime(4);
+}
+function sighting(name: string, blurb: string, isNew: boolean) {
+  toasts.push({ name, blurb, isNew });
+  if (toastT <= 0) showToast();
+}
+giants.onSight = ({ sp, isNew }) => sighting(sp.name, sp.blurb, isNew);
+
+// Common life counts too, loosely by type. Each is noted the first time you come close.
+const COMMON: { key: string; name: string; blurb: string; seen: () => boolean }[] = [
+  { key: "clownfish", name: "Clownfish", blurb: "Lives among the stinging tentacles of anemones. That's you.", seen: () => true },
+  { key: "plankton", name: "Plankton", blurb: "Drifters too small to swim against the current. The base of the ocean's food web.", seen: () => motes.nearest(player.pos) < 5 },
+  { key: "jellyfish", name: "Jellyfish", blurb: "No brain, no heart, no bones. About 95 percent water.", seen: () => jellies.nearest(player.pos) < 12 },
+  { key: "schoolfish", name: "Schooling fish", blurb: "Hundreds move as one, to confuse anything that hunts them.", seen: () => schools.nearest(player.pos) < 14 },
+  { key: "coral", name: "Coral", blurb: "Animals, not plants: colonies of tiny polyps building stone.", seen: () => biome(player.pos.x, player.pos.z).reef > 0.45 },
+];
+let commonT = 3.5;
 giants.onSong = (pitch, gain) => audio.song(pitch, gain);
 giants.onClicks = (gain) => audio.clicks(gain);
 const intro = document.getElementById("intro")!;
@@ -141,7 +160,15 @@ function frame(now: number) {
   bubbles.update(dt, t);
   tod.update(dt);
   giants.update(dt, t, player.pos, tod.name === "Night");
-  if (toastT > 0 && (toastT -= dt) <= 0) hud.toast.classList.remove("on");
+  commonT -= dt;
+  if (commonT < 0) {
+    commonT = 0.5;
+    for (const c of COMMON) if (!giants.seen.has(c.key) && c.seen() && giants.note(c.key)) sighting(c.name, c.blurb, true);
+  }
+  if (toastT > 0 && (toastT -= dt) <= 0) {
+    if (toasts.length) showToast();
+    else hud.toast.classList.remove("on");
+  }
 
   // Chase camera: behind and a little above, lagging on turns; never through the floor or surface.
   // Third person at the fish's true size: a short chase distance keeps the fish readable on screen.
