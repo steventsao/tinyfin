@@ -147,7 +147,8 @@ function frame(now: number) {
   // Third person at the fish's true size: a short chase distance keeps the fish readable on screen.
   const s = player.scale;
   camTarget.copy(player.pos).addScaledVector(player.fwd, -3.4 * s).add(look.set(0, 0.95 * s, 0));
-  camera.position.lerp(camTarget, 1 - Math.exp(-dt * 3.2));
+  // Tight follow: at a 35 cm fish, a slow lerp leaves the camera metres behind and the fish a speck.
+  camera.position.lerp(camTarget, 1 - Math.exp(-dt * 7));
   const fl = height(camera.position.x, camera.position.z) + 0.25;
   if (camera.position.y < fl) camera.position.y = fl;
   if (camera.position.y > -0.3) camera.position.y = -0.3;
