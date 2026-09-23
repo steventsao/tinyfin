@@ -566,14 +566,14 @@ export class Megafauna {
     // Shrink the loop until the whole path stays in water deep enough for this animal.
     let R = near ? 32 : 45 + rnd() * 60;
     if (!near) {
-      for (let tries = 0; tries < 5; tries++) {
+      for (let tries = 0; tries < 9; tries++) {
         let ok = true;
         for (let k = 0; k < 10 && ok; k++) {
           const a = (k / 10) * Math.PI * 2;
           if (-height(c.x + Math.cos(a) * R * 1.22, c.y + Math.sin(a) * R * 1.22) < sp.minDepth * 0.9) ok = false;
         }
         if (ok) break;
-        R = Math.max(20, R * 0.7);
+        R = Math.max(10, R * 0.72);
       }
     }
     const dirSign = rnd() < 0.5 ? -1 : 1;
