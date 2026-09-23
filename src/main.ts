@@ -15,6 +15,8 @@ import { setWorldSeed, WORLD } from "./noise";
 
 const params = new URLSearchParams(location.search);
 const AUTO = params.has("autoplay");
+// ?autopilot=1: swims by itself like autoplay, but keeps the HUD (for recording clips).
+const PILOT = AUTO || params.has("autopilot");
 // A fresh ocean every visit unless ?seed= pins one.
 setWorldSeed(params.has("seed") ? Number(params.get("seed")) : 1 + Math.floor(Math.random() * 999999));
 
@@ -141,8 +143,9 @@ giants.onSong = (pitch, gain) => audio.song(pitch, gain);
 giants.onClicks = (gain) => audio.clicks(gain);
 const intro = document.getElementById("intro")!;
 // No start gate: the fish swims from the first frame. The title fades by itself or on first input.
-let introUp = !AUTO;
-if (AUTO) { intro.remove(); document.body.classList.add("auto"); }
+let introUp = !PILOT;
+if (PILOT) intro.remove();
+if (AUTO) document.body.classList.add("auto");
 function dismissIntro() {
   if (!introUp) return;
   introUp = false;
@@ -202,7 +205,7 @@ function frame(now: number) {
   t += dt;
   G.uTime.value = t;
 
-  player.update(dt, t, input, AUTO);
+  player.update(dt, t, input, PILOT);
   world.update(player.pos.x, player.pos.z, 1);
   schools.update(dt, t, player.pos, player.fwd, player.speed);
   jellies.update(dt, t, player.pos, player.fwd);
