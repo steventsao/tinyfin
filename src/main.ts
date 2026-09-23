@@ -9,6 +9,7 @@ import { Schools, Jellies, Motes, Bubbles } from "./life";
 import { TimeOfDay } from "./tod";
 import { Audio } from "./audio";
 import { biomeName, height } from "./terrain";
+import { Megafauna } from "./megafauna";
 
 const params = new URLSearchParams(location.search);
 const AUTO = params.has("autoplay");
@@ -34,6 +35,7 @@ const jellies = new Jellies(scene, player.pos);
 const motes = new Motes(scene, player.pos);
 const bubbles = new Bubbles(scene);
 const input = new Input(renderer.domElement);
+const giants = new Megafauna(scene, params.get("encounter"));
 const audio = new Audio();
 
 // Build the whole first neighbourhood before the first frame.
@@ -47,7 +49,17 @@ const hud = {
   dist: document.getElementById("dist")!,
   food: document.getElementById("food")!,
   time: document.getElementById("time")!,
+  seen: document.getElementById("seen")!,
+  toast: document.getElementById("toast")!,
 };
+let toastT = 0;
+giants.onSight = ({ sp, isNew }) => {
+  hud.toast.innerHTML = `<div class="k">${isNew ? "New sighting" : "Sighting"}</div><div class="n">${sp.name}</div><div class="b">${sp.blurb}</div>`;
+  hud.toast.classList.add("on");
+  toastT = 7;
+  if (isNew) audio.chime(4);
+};
+giants.onSong = (pitch, gain) => audio.song(pitch, gain);
 const intro = document.getElementById("intro")!;
 // No start gate: the fish swims from the first frame. The title fades by itself or on first input.
 let introUp = !AUTO;
@@ -124,6 +136,8 @@ function frame(now: number) {
   if (bubbleT < 0) { bubbles.emit(player.mouth, 2 + Math.floor(Math.random() * 3)); bubbleT = 1 + Math.random() * 2.5; }
   bubbles.update(dt, t);
   tod.update(dt);
+  giants.update(dt, t, player.pos, tod.name === "Night");
+  if (toastT > 0 && (toastT -= dt) <= 0) hud.toast.classList.remove("on");
 
   // Chase camera: behind and a little above, lagging on turns; never through the floor or surface.
   const s = player.scale;
@@ -147,6 +161,7 @@ function frame(now: number) {
     hud.dist.textContent = player.distance < 1000 ? `${player.distance.toFixed(0)} m swum` : `${(player.distance / 1000).toFixed(2)} km swum`;
     hud.food.textContent = `${motes.eaten}`;
     hud.time.textContent = tod.name;
+    hud.seen.textContent = `${giants.seen.size}/${giants.total}`;
   }
 
   post.render(scene, camera, t);
@@ -156,4 +171,4 @@ function frame(now: number) {
 // Compile every program behind the intro so the first swim doesn't stall.
 renderer.compile(scene, camera);
 requestAnimationFrame((n) => { last = n; frame(n); });
-(window as unknown as { __drift: unknown }).__drift = { player, world, renderer };
+(window as unknown as { __drift: unknown }).__drift = { player, world, renderer, giants, camera };

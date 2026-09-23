@@ -63,6 +63,27 @@ void main(){
     float tail = smoothstep(0.25, -0.6, p.z);
     p.x += sin(p.z * 7.0 - ph) * uSwimAmp * (0.2 + tail);
   #endif
+  #ifdef SWIMV
+    // Whales: the body undulates up and down, flukes beat hardest.
+    float phv = uTime * uSwimRate + seed;
+    float tl = smoothstep(0.15, -0.62, p.z);
+    p.y += sin(p.z * 3.5 - phv) * uSwimAmp * (0.12 + tl * tl * 1.8);
+  #endif
+  #ifdef FLAP
+    // Manta: wings beat in a wave from the body out to the tips.
+    float phf = uTime * uSwimRate + seed;
+    float ax = abs(p.x);
+    p.y += sin(phf - ax * 2.5) * uSwimAmp * ax * ax * 5.0;
+    p.y += sin(phf * 0.5 - p.z * 6.0) * 0.02 * smoothstep(-0.15, -0.4, p.z);
+  #endif
+  #ifdef TENT
+    // Squid: the mantle breathes, arms and tentacles trail and curl.
+    float pht = uTime * uSwimRate + seed;
+    float kt = max(0.0, -p.z - 0.15);
+    p.x += sin(pht * 0.7 + p.z * 7.0 + p.y * 40.0) * kt * 0.22;
+    p.y += cos(pht * 0.6 + p.z * 6.0 + p.x * 40.0) * kt * 0.18;
+    if (p.z > -0.12) p.xy *= 1.0 + 0.05 * sin(pht * 0.8);
+  #endif
   #ifdef JELLY
     float pulse = sin(uTime * 2.2 + seed);
     if (p.y > 0.0) { p.xz *= 1.0 - 0.16 * pulse * (1.05 - p.y); p.y *= 1.0 + 0.08 * pulse; }
@@ -145,6 +166,9 @@ export interface ToonOpts {
   swimAmp?: number;
   swimRate?: number;
   jelly?: boolean;
+  swimv?: boolean;
+  flap?: boolean;
+  tent?: boolean;
   side?: THREE.Side;
 }
 
@@ -153,6 +177,9 @@ export function toon(o: ToonOpts = {}): THREE.ShaderMaterial & { uniforms: Recor
   if (o.sway) defines.SWAY = "";
   if (o.swim) defines.SWIM = "";
   if (o.jelly) defines.JELLY = "";
+  if (o.swimv) defines.SWIMV = "";
+  if (o.flap) defines.FLAP = "";
+  if (o.tent) defines.TENT = "";
   return new THREE.ShaderMaterial({
     glslVersion: THREE.GLSL3,
     defines,

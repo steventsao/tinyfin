@@ -134,12 +134,12 @@ export class Audio {
     }
   }
 
-  private whale(): void {
+  private whale(pitch = 1, gain = 0.05): void {
     const ctx = this.ctx!;
     const t = ctx.currentTime;
     const o = ctx.createOscillator();
     o.type = "sawtooth";
-    const f0 = 90 + Math.random() * 80;
+    const f0 = (90 + Math.random() * 80) * pitch;
     o.frequency.setValueAtTime(f0, t);
     o.frequency.linearRampToValueAtTime(f0 * (1.4 + Math.random() * 0.6), t + 1.6);
     o.frequency.linearRampToValueAtTime(f0 * 0.8, t + 3.6);
@@ -154,7 +154,7 @@ export class Audio {
     lp.Q.value = 6;
     const g = ctx.createGain();
     g.gain.setValueAtTime(0.0001, t);
-    g.gain.exponentialRampToValueAtTime(0.05, t + 0.8);
+    g.gain.exponentialRampToValueAtTime(gain, t + 0.8);
     g.gain.exponentialRampToValueAtTime(0.0001, t + 3.8);
     o.connect(lp).connect(g);
     g.connect(this.verb);
@@ -162,6 +162,13 @@ export class Audio {
     vib.start(t);
     o.stop(t + 4);
     vib.stop(t + 4);
+  }
+
+  /** A nearby whale's call: louder and closer-sounding than the ambient far calls. */
+  song(pitch: number, gain: number): void {
+    if (!this.ctx) return;
+    this.whale(pitch, gain);
+    setTimeout(() => this.ctx && this.whale(pitch * 1.25, gain * 0.7), 2600);
   }
 
   update(dt: number, speed: number, depth: number): void {
